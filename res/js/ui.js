@@ -768,6 +768,14 @@ define(["require", "exports", "./latte"], function (require, exports, latte_1) {
             return ButtonItem;
         }(Clickable));
         ui.ButtonItem = ButtonItem;
+        var ToolbarItem = (function (_super) {
+            __extends(ToolbarItem, _super);
+            function ToolbarItem() {
+                return _super.call(this, 'toolbar') || this;
+            }
+            return ToolbarItem;
+        }(Item));
+        ui.ToolbarItem = ToolbarItem;
         var Selectable = (function (_super) {
             __extends(Selectable, _super);
             function Selectable() {
@@ -922,6 +930,13 @@ define(["require", "exports", "./latte"], function (require, exports, latte_1) {
                     this.updateUi();
                 }
             };
+            Object.defineProperty(AnchorView.prototype, "isVertical", {
+                get: function () {
+                    return this.side == Side.LEFT || this.side == Side.RIGHT;
+                },
+                enumerable: true,
+                configurable: true
+            });
             Object.defineProperty(AnchorView.prototype, "side", {
                 get: function () {
                     return this.getPropertyValue('side', Side, Side.TOP);
@@ -1100,6 +1115,33 @@ define(["require", "exports", "./latte"], function (require, exports, latte_1) {
             return SplitView;
         }(AnchorView));
         ui.SplitView = SplitView;
+        var ToolbarView = (function (_super) {
+            __extends(ToolbarView, _super);
+            function ToolbarView() {
+                return _super.call(this, 'toolbar') || this;
+            }
+            ToolbarView.prototype.updateUi = function () {
+                _super.prototype.updateUi.call(this);
+            };
+            ToolbarView.prototype.onEvent = function (name, args) {
+                _super.prototype.onEvent.call(this, name, args);
+                if (name == 'attach') {
+                    this.add(this.toolbar);
+                    this.updateUi();
+                }
+            };
+            Object.defineProperty(ToolbarView.prototype, "toolbar", {
+                get: function () {
+                    return this.getLazyProperty('toolbar', ToolbarItem, function () {
+                        return new ToolbarItem();
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
+            return ToolbarView;
+        }(AnchorView));
+        ui.ToolbarView = ToolbarView;
         var ColorView = (function (_super) {
             __extends(ColorView, _super);
             function ColorView(c) {

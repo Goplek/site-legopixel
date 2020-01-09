@@ -170,23 +170,42 @@ export namespace icon{
 
         static legoPalette(): Color[]{
             let pal = [
-                Color.white,
-                Color.red,
-                Color.blue,
-                Color.fromHex('ff0'),
-                Color.black,
-                Color.fromHex('2bc114'), //green
-                Color.fromHex('d9c285'), //sand
-                Color.fromHex('1b3c71'), //navy
-                Color.fromHex('555'),
-                Color.fromHex('bbb'),
-                Color.fromHex('51311a'), //brown
-                Color.fromHex('fd9330'), //orange
-                Color.combine(Color.fromHex('ccc'), Color.red),
-                Color.combine(Color.fromHex('ccc'), Color.blue),
-                Color.combine(Color.fromHex('ccc'), Color.fromHex('ff0')),
-                Color.combine(Color.fromHex('ccc'), Color.fromHex('2bc114')),
-                Color.combine(Color.fromHex('ccc'), Color.fromHex('fd9330')),
+                Color.white, // 302401/3024
+                Color.red, // 302421/3024
+                Color.blue, // 302423/3024
+                Color.fromHex('ff0'), // bright yellow 302424/3024
+                Color.black, // 302426/3024
+                Color.fromHex('2bc114'), //green 302428/3024
+                Color.fromHex('d9c285'), //sand 4159553/3024
+                Color.fromHex('1b3c71'), //navy 4184108/3024
+                Color.fromHex('555'), // dark stone grey 4210719/3024
+                Color.fromHex('bbb'), // medium stone grey 4211399/3024
+                Color.fromHex('51311a'), //brown 4221744/3024
+                Color.fromHex('fd9330'), //orange 4524929/3024
+            ];
+            log(pal.map(c => c.toHexString()));
+            return pal;
+        }
+
+        static legoPaletteWithTransparents(): Color[]{
+            let pal = [
+                Color.white, // 302401/3024
+                Color.red, // 302421/3024
+                Color.blue, // 302423/3024
+                Color.fromHex('ff0'), // bright yellow 302424/3024
+                Color.black, // 302426/3024
+                Color.fromHex('2bc114'), //green 302428/3024
+                Color.fromHex('d9c285'), //sand 4159553/3024
+                Color.fromHex('1b3c71'), //navy 4184108/3024
+                Color.fromHex('555'), // dark stone grey 4210719/3024
+                Color.fromHex('bbb'), // medium stone grey 4211399/3024
+                Color.fromHex('51311a'), //brown 4221744/3024
+                Color.fromHex('fd9330'), //orange 4524929/3024
+                Color.combine(Color.fromHex('555'), Color.red),
+                Color.combine(Color.fromHex('555'), Color.blue),
+                Color.combine(Color.fromHex('555'), Color.fromHex('ff0')),
+                Color.combine(Color.fromHex('555'), Color.fromHex('2bc114')),
+                Color.combine(Color.fromHex('555'), Color.fromHex('fd9330')),
             ];
             log(pal.map(c => c.toHexString()));
             return pal;

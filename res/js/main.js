@@ -59,30 +59,36 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
             updateSize(new Size(parseInt(ws.widthSlider.value), parseInt(ws.heightSlider.value)));
         });
         ws.colorSlider
-            .initRange(1, 6, 1, 6)
+            .initRange(1, 8, 1, 7)
             .on('didSetValue', function () {
             switch (parseInt(ws.colorSlider.value)) {
                 case 1:
                     pal = [Color.black, Color.white];
                     break;
                 case 2:
-                    pal = [Color.black, Color.white, Color.red];
+                    pal = [Color.black, Color.white, Color.fromHex('555'), Color.fromHex('bbb')];
                     break;
                 case 3:
-                    pal = [Color.black, Color.white, Color.red, Color.blue, Color.green];
+                    pal = [Color.black, Color.white, Color.red];
                     break;
                 case 4:
+                    pal = [Color.black, Color.white, Color.red, Color.blue, Color.green];
+                    break;
+                case 5:
                     pal = [Color.black, Color.white, Color.red, Color.blue, Color.green,
                         Color.fromHex('ff0'), Color.fromHex('0ff'), Color.fromHex('f0f')];
                     break;
-                case 5:
+                case 6:
                     pal = [Color.black, Color.red, Color.white, Color.fromHex('A52A2A'),
                         Color.fromHex('ff0'), Color.fromHex('f7d89e'), Color.green, Color.fromHex('a2fb5f'),
                         Color.blue, Color.fromHex('52c8fd'), Color.fromHex('ccc'), Color.fromHex('777')
                     ];
                     break;
-                case 6:
+                case 7:
                     pal = Icon.legoPalette();
+                    break;
+                case 8:
+                    pal = Icon.legoPaletteWithTransparents();
                     break;
             }
             applyFilters();

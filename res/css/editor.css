@@ -101,6 +101,7 @@ div.slider .value{
     bottom: 0;
 }
 
+/*SplitView*/
 .view.split > .container{
     /*background: orange;*/
 }
@@ -154,4 +155,13 @@ div.slider .value{
 .view.split.side-bottom  > .splitter{
     margin-bottom: -3px;
     height: 6px;
+}
+
+/*ToolbarView*/
+.view.toolbar > .container{
+}
+
+.item.toolbar{
+    background: #f90;
+    min-height: 50px;
 }

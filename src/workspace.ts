@@ -24,6 +24,7 @@ export namespace workspace{
     import SplitView = ui.SplitView;
     import Side = latte.Side;
     import ColorView = ui.ColorView;
+    import ToolbarView = ui.ToolbarView;
 
     /**
      * Mouse related events
@@ -762,36 +763,21 @@ export namespace workspace{
                     this.testLabel
                 ]);
 
+                //TODO: Working on toolbarView
+
                 // this.testLabel.description = Optional.of("desc");
                 this.testLabel.icon = Optional.of(LinearIcon.cross);
 
-                let a = new SplitView();
-                a.side = Side.LEFT;
-                a.wide = 100;
-                a.sideView = Optional.of(ColorView.fromString('f00'));
-
-
-                let b = new SplitView();
-                b.side = Side.TOP;
-                b.wide = 100;
-                //b.sideView = Optional.of(ColorView.fromString('ff0'));
-
-                let c = new SplitView();
-                c.side = Side.LEFT;
-                c.wide = 100;
-                c.sideView = Optional.of(ColorView.fromString('0f0'));
-
-                let d = new SplitView();
-                d.side = Side.RIGHT;
-                d.wide = 100;
-                d.view = Optional.of(ColorView.fromString('f0f'));
-                d.sideView = Optional.of(ColorView.fromString('0ff'));
-
-                a.view = Optional.of(b);
-                b.view = Optional.of(c);
-                b.sideView = Optional.of(d);
-                c.view = Optional.of(ColorView.fromString('00f'));
-                MainView.instance.view = Optional.of(a);
+                // let splitView = new SplitView();
+                // splitView.side = Side.RIGHT;
+                // splitView.wide = 100;
+                // splitView.sideView = Optional.of(ColorView.fromString('00f'));
+                //
+                // let toolbarView = new ToolbarView();
+                // toolbarView.view = Optional.of(ColorView.fromString('0f0'));
+                //
+                // splitView.view = Optional.of(toolbarView);
+                // MainView.instance.view = Optional.of(splitView);
 
                 // Update fps every half second
                 setInterval(() => this.divFps.html = `${this.canvas.fps}fps`, 500);
