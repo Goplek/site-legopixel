@@ -62,3 +62,96 @@ div.slider .value{
     background: deepskyblue;
     color: white;
 }
+
+.item.label, .item.label * {
+    /*border: solid 1px red;*/
+}
+
+.item.label.with-icon{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+.item.label.with-icon > .icon-container{
+    min-width: 10px;
+    /*background: #ff0;*/
+}
+
+.item.label > .desc,
+.item.label > .group > .desc{
+    opacity: 0.5;
+}
+
+.item.icon{
+    width: 16px;
+    height: 16px;
+}
+
+.view{
+    /*background: #ff0;*/
+}
+
+.view,
+.view > .container{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.view.split > .container{
+    /*background: orange;*/
+}
+
+.view.split{
+    z-index: 500;
+}
+
+.view.split > .side-container{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.view.split  > .splitter{
+    cursor: ns-resize;
+    position: absolute;
+    background-color: orange;
+    opacity: 0;
+    z-index: 1000;
+}
+
+.view.split  > .splitter:not(.vertical){
+    left: 0;
+    right: 0;
+}
+
+.view.split  > .splitter.vertical{
+    cursor: ew-resize;
+    top: 0;
+    bottom: 0;
+}
+
+.view.split.side-left  > .splitter{
+    margin-left: -3px;
+    width: 6px;
+}
+
+.view.split.side-right  > .splitter{
+    margin-right: -3px;
+    width: 6px;
+}
+
+.view.split.side-top  > .splitter{
+    margin-top: -3px;
+    height: 6px;
+}
+
+.view.split.side-bottom  > .splitter{
+    margin-bottom: -3px;
+    height: 6px;
+}

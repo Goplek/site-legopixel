@@ -23,7 +23,11 @@ export namespace icon{
     import _zeroFill = latte._zeroFill;
     import PropertyTarget = latte.PropertyTarget;
     import DidSet = latte.DidSet;
+    import Optional = latte.Optional;
 
+    /**
+     * Represents a pixel by extending color
+     */
     export class Pixel extends Color{
 
         //region Methods
@@ -100,26 +104,35 @@ export namespace icon{
             this.a = c.a;
         }
 
-        nearest(pallete: Color[]){
+        /**
+         * Gets the nearest color in the specified palette
+         * @param {latte.Color[]} palette
+         * @returns {latte.Color}
+         */
+        nearest(palette: Color[]){
             let min = Number.MAX_VALUE;
             let minIndex = -1;
-            pallete.forEach((c, i) => {
+            palette.forEach((c, i) => {
                 let d = this.distanceTo(c);
                 min = Math.min(min, d);
                 if(min === d) {
                     minIndex = i;
                 }
             });
-            return pallete[minIndex];
+            return palette[minIndex];
         }
 
-        snapToPalette(pallete: Color[]){
+        /**
+         * Snaps the pixel to the specified palette
+         * @param {latte.Color[]} palette
+         */
+        snapToPalette(palette: Color[]){
             /**
              * BIG to do
              * Look for color quantization techniques
              * @type {number}
              */
-            let nearest = this.nearest(pallete);
+            let nearest = this.nearest(palette);
             this.r = nearest.r;
             this.g = nearest.g;
             this.b = nearest.b;
@@ -129,6 +142,9 @@ export namespace icon{
 
     }
 
+    /**
+     * Represents an icon by a linear array of pixels
+     */
     export class Icon extends PropertyTarget{
 
         //region Static
@@ -153,6 +169,30 @@ export namespace icon{
         }
 
         static legoPalette(): Color[]{
+            let pal = [
+                Color.white,
+                Color.red,
+                Color.blue,
+                Color.fromHex('ff0'),
+                Color.black,
+                Color.fromHex('2bc114'), //green
+                Color.fromHex('d9c285'), //sand
+                Color.fromHex('1b3c71'), //navy
+                Color.fromHex('555'),
+                Color.fromHex('bbb'),
+                Color.fromHex('51311a'), //brown
+                Color.fromHex('fd9330'), //orange
+                Color.combine(Color.fromHex('ccc'), Color.red),
+                Color.combine(Color.fromHex('ccc'), Color.blue),
+                Color.combine(Color.fromHex('ccc'), Color.fromHex('ff0')),
+                Color.combine(Color.fromHex('ccc'), Color.fromHex('2bc114')),
+                Color.combine(Color.fromHex('ccc'), Color.fromHex('fd9330')),
+            ];
+            log(pal.map(c => c.toHexString()));
+            return pal;
+        }
+
+        static legoPalette_TooLarge(): Color[]{
             return [
                 new Color(217, 187, 123),
                 new Color(214, 114, 64),
@@ -216,7 +256,7 @@ export namespace icon{
         }
 
         //region Private Methods
-        private colorStatistics(p: Color[]): {[color: string]: number}{
+        colorStatistics(p: Color[]): {[color: string]: number}{
 
             let zero = (color: Color):string => {
                 return _zeroFill(3, color.r) + _zeroFill(3, color.g) + _zeroFill(3, color.b)
@@ -564,14 +604,14 @@ export namespace icon{
          * Gets the height of the icon
          */
         get height(): number {
-            return this.getPropertyValue('height', 0);
+            return this.getPropertyValue('height', Number, 0);
         }
 
         /**
          * Gets the unidimensional array of pixels
          */
         get pixels(): Pixel[] {
-            return this.getPropertyValue('pixels', []);
+            return this.getPropertyValue('pixels', Array, []);
         }
 
         /**
@@ -587,7 +627,7 @@ export namespace icon{
          * Gets the width of the icon
          */
         get width(): number {
-            return this.getPropertyValue('width', 0);
+            return this.getPropertyValue('width', Array,0);
         }
 
         //endregion
@@ -667,20 +707,20 @@ export namespace icon{
 
             if(!this.icon || !this.canvas){
                 this.setPropertyValues({
-                    canvasRectangle: Rectangle.empty(),
-                    iconRectangle:   Rectangle.empty(),
-                    pixelSize:       Size.zero()
+                    canvasRectangle: Rectangle.zero,
+                    iconRectangle:   Rectangle.zero,
+                    pixelSize:       Size.empty
                 });
 
             }else{
-                this.setPropertyValue('canvasRectangle', new Rectangle(0, 0, canvas.width, canvas.height));
+                this.setPropertyValue('canvasRectangle', new Rectangle(0, 0, canvas.width, canvas.height), Rectangle);
 
                 this.setPropertyValue('iconRectangle', new Rectangle(0, 0, icon.width, icon.height)
                     .scaleToFit(this.canvasRectangle.size)
-                    .centerOn(this.canvasRectangle));
+                    .centerOn(this.canvasRectangle), Rectangle);
 
                 this.setPropertyValue('pixelSize', new Size(this.iconRectangle.width / icon.width,
-                    this.iconRectangle.height / icon.height));
+                    this.iconRectangle.height / icon.height), Size);
 
             }
 
@@ -694,21 +734,21 @@ export namespace icon{
          * Gets the canvas rectangle
          */
         get canvasRectangle(): Rectangle {
-            return this.getPropertyValue('canvasRectangle', Rectangle.empty());
+            return this.getPropertyValue('canvasRectangle', Rectangle, Rectangle.zero);
         }
 
         /**
          * Gets the rectangle of the icon on the canvas
          */
         get iconRectangle(): Rectangle {
-            return this.getPropertyValue('iconRectangle', null);
+            return this.getPropertyValue('iconRectangle', Rectangle, Rectangle.zero);
         }
 
         /**
          * Gets the size of the pixel in the canvas
          */
         get pixelSize(): Size {
-            return this.getPropertyValue('pixelSize', Size.zero());
+            return this.getPropertyValue('pixelSize', Size, Size.empty);
         }
 
         //endregion
@@ -719,7 +759,7 @@ export namespace icon{
          * Gets or sets the canvas of the projection
          */
         get canvas(): Canvas {
-            return this.getPropertyValue('canvas', null);
+            return this.getPropertyValue('canvas', Canvas,null);
         }
 
         /**
@@ -728,14 +768,14 @@ export namespace icon{
          * @param {Canvas} value
          */
         set canvas(value: Canvas) {
-            this.setPropertyValue('canvas', value);
+            this.setPropertyValue('canvas', value, Canvas);
         }
 
         /**
          * Gets or sets the icon of the projection
          */
         get icon(): Icon {
-            return this.getPropertyValue('icon', null);
+            return this.getPropertyValue('icon', Icon,null);
         }
 
         /**
@@ -744,7 +784,7 @@ export namespace icon{
          * @param {Icon} value
          */
         set icon(value: Icon) {
-            this.setPropertyValue('icon', value);
+            this.setPropertyValue('icon', value, Icon);
         }
 
         //endregion
@@ -768,6 +808,19 @@ export namespace icon{
             this.plugins.push(new ImportFileTool(this));
         }
 
+        //region Private
+        private checkForProjection(){
+
+            if(!this.projection.isPresent && this.canvas && this.icon) {
+                this.setPropertyValue('projection',
+                    Optional.of(
+                        new IconProjection(this.icon, this.canvas)),
+                    Optional);
+            }
+
+        }
+        //endregion
+
         //region Methods
 
         /**
@@ -776,16 +829,18 @@ export namespace icon{
          */
         draw(){
 
-            this.projection.update();
+            this.projection.ifPresent(p => p.update());
 
             // Adjust this threshold for grid tolerance
             let gridThreshold = 10;
 
             this.drawIcon();
 
-            if(this.projection.pixelSize.width >= gridThreshold) {
-                // this.drawGrid();
-            }
+            this.projection.ifPresent(p => {
+                if(p.pixelSize.width >= gridThreshold) {
+                    // this.drawGrid();
+                }
+            });
 
         }
 
@@ -796,25 +851,29 @@ export namespace icon{
          */
         drawGrid(){
 
-            let iconRect = this.projection.iconRectangle;
-            let pixelSize = this.projection.pixelSize;
+            this.projection.ifPresent(projection => {
+                let iconRect = projection.iconRectangle;
+                let pixelSize = projection.pixelSize;
 
-            let context = this.canvas.context;
+                let context = this.canvas.context;
 
-            context.strokeStyle = CanvasTheme.gridColor.toHexString();
+                context.strokeStyle = CanvasTheme.gridColor.toHexString();
 
-            let drawRow = (row: number) =>{
-                let y = iconRect.top + row * pixelSize.height;
-                this.drawLine(iconRect.left, y, iconRect.right, y);
-            };
+                let drawRow = (row: number) =>{
+                    let y = iconRect.top + row * pixelSize.height;
+                    this.drawLine(iconRect.left, y, iconRect.right, y);
+                };
 
-            let drawCol = (col: number) =>{
-                let x = iconRect.left + col * pixelSize.width;
-                this.drawLine(x, iconRect.top, x, iconRect.bottom);
-            };
+                let drawCol = (col: number) =>{
+                    let x = iconRect.left + col * pixelSize.width;
+                    this.drawLine(x, iconRect.top, x, iconRect.bottom);
+                };
 
-            for(let row = 0; row <= this.icon.height; row++) drawRow(row);
-            for(let col = 0; col <= this.icon.width ; col++) drawCol(col);
+                for(let row = 0; row <= this.icon.height; row++) drawRow(row);
+                for(let col = 0; col <= this.icon.width ; col++) drawCol(col);
+            });
+
+
 
         }
 
@@ -829,8 +888,8 @@ export namespace icon{
 
                     let px = this.icon.getPixel(x, y);
 
-                    if(px) {
-                        this.drawRectangle(this.projection.getPixelRect(x, y), px);
+                    if(px && this.projection.isPresent) {
+                        this.drawRectangle(this.projection.orThrow().getPixelRect(x, y), px);
                     }
 
                 }
@@ -888,10 +947,13 @@ export namespace icon{
                     if(!this.base) this.saveBase();
                 }
 
-                this.projection.icon = this.icon;
+                this.projection.ifPresent( p => p.icon = this.icon);
+                this.checkForProjection();
 
             }else if(e.property == 'canvas') {
-                this.projection.canvas = this.canvas;
+
+                this.projection.ifPresent(p => p.canvas = this.canvas);
+                this.checkForProjection();
             }
 
         }
@@ -900,7 +962,7 @@ export namespace icon{
          * Sets the current icon as the base for certain operations, like brightness, contrast, etc
          */
         saveBase(icon: Icon = null){
-            this.setPropertyValue('base',  icon || this.icon.clone());
+            this.setPropertyValue('base', icon || this.icon.clone(), Icon);
         }
 
         //endregion
@@ -911,14 +973,14 @@ export namespace icon{
          * Gets the base icon
          */
         get base(): Icon {
-            return this.getPropertyValue('base', null);
+            return this.getPropertyValue('base', Icon, null);
         }
 
         /**
          * Gets or sets the icon of the illustrator
          */
         get icon(): Icon {
-            return this.getPropertyValue('icon', null);
+            return this.getPropertyValue('icon', Icon, null);
         }
 
         /**
@@ -927,14 +989,14 @@ export namespace icon{
          * @param {Icon} value
          */
         set icon(value: Icon) {
-            this.setPropertyValue('icon', value);
+            this.setPropertyValue('icon', value, Icon);
         }
 
         /**
          * Gets or sets the original image of the icon
          */
         get original(): ImageStream {
-            return this.getPropertyValue('original', null);
+            return this.getPropertyValue('original', ImageStream, null);
         }
 
         /**
@@ -943,14 +1005,14 @@ export namespace icon{
          * @param {ImageStream} value
          */
         set original(value: ImageStream) {
-            this.setPropertyValue('original', value);
+            this.setPropertyValue('original', value, ImageStream);
         }
 
         /**
          * Gets the projection of the icon
          */
-        get projection(): IconProjection {
-            return this.getPropertyValue('projection', new IconProjection(null, null));
+        get projection(): Optional<IconProjection> {
+            return this.getPropertyValue('projection', Optional, Optional.empty());
         }
 
         //endregion
@@ -980,7 +1042,10 @@ export namespace icon{
 
             }else if(mouse == Mouse.MOVE) {
 
-                let p = this.illustrator.projection.getPixelAt(e.offsetX, e.offsetY);
+                let p:Point = null;
+
+                this.illustrator.projection.ifPresent(projection =>
+                    p = projection.getPixelAt(e.offsetX, e.offsetY));
 
                 if(this.down && p) {
                     this.illustrator.icon.getPixel(p.x, p.y).setColor(Color.red);

@@ -8,7 +8,7 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-define(["require", "exports", "./ui", "./viewport", "./latte"], function (require, exports, ui_1, viewport_1, latte_1) {
+define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], function (require, exports, ui_1, viewport_1, latte_1, linearicon_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var workspace;
@@ -17,6 +17,13 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
         var PropertyTarget = latte_1.latte.PropertyTarget;
         var DivElement = ui_1.ui.DivElement;
         var InputElement = ui_1.ui.InputElement;
+        var Label = ui_1.ui.LabelItem;
+        var Optional = latte_1.latte.Optional;
+        var LinearIcon = linearicon_1.linearicon.LinearIcon;
+        var MainView = ui_1.ui.MainView;
+        var SplitView = ui_1.ui.SplitView;
+        var Side = latte_1.latte.Side;
+        var ColorView = ui_1.ui.ColorView;
         var Mouse;
         (function (Mouse) {
             Mouse[Mouse["UP"] = 0] = "UP";
@@ -53,10 +60,10 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             }
             Object.defineProperty(IllustratorActuator.prototype, "illustrator", {
                 get: function () {
-                    return this.getPropertyValue('illustrator', null);
+                    return this.getPropertyValue('illustrator', Illustrator, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('illustrator', value);
+                    this.setPropertyValue('illustrator', value, Illustrator);
                 },
                 enumerable: true,
                 configurable: true
@@ -71,10 +78,10 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             }
             Object.defineProperty(Tool.prototype, "active", {
                 get: function () {
-                    return this.getPropertyValue('active', false);
+                    return this.getPropertyValue('active', Boolean, false);
                 },
                 set: function (value) {
-                    this.setPropertyValue('active', value);
+                    this.setPropertyValue('active', value, Boolean);
                 },
                 enumerable: true,
                 configurable: true
@@ -93,10 +100,10 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             }
             Object.defineProperty(Plugin.prototype, "enabled", {
                 get: function () {
-                    return this.getPropertyValue('enabled', true);
+                    return this.getPropertyValue('enabled', Boolean, true);
                 },
                 set: function (value) {
-                    this.setPropertyValue('enabled', value);
+                    this.setPropertyValue('enabled', value, Boolean);
                 },
                 enumerable: true,
                 configurable: true
@@ -159,10 +166,10 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             };
             Object.defineProperty(Illustrator.prototype, "canvas", {
                 get: function () {
-                    return this.getPropertyValue('canvas', null);
+                    return this.getPropertyValue('canvas', Canvas, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('canvas', value);
+                    this.setPropertyValue('canvas', value, Canvas);
                 },
                 enumerable: true,
                 configurable: true
@@ -176,10 +183,10 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Illustrator.prototype, "tool", {
                 get: function () {
-                    return this.getPropertyValue('tool', null);
+                    return this.getPropertyValue('tool', Tool, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('tool', value);
+                    this.setPropertyValue('tool', value, Tool);
                 },
                 enumerable: true,
                 configurable: true
@@ -227,7 +234,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                     this.raw.height = desiredHeight * scaleFactor;
                     this.raw.style.width = String(desiredWidth) + 'px';
                     this.raw.style.height = String(desiredHeight) + 'px';
-                    this.setPropertyValue('context', this.raw.getContext('2d'));
+                    this.setPropertyValue('context', this.raw.getContext('2d'), CanvasRenderingContext2D);
                     this.context.scale(scaleFactor, scaleFactor);
                 }
                 else {
@@ -246,7 +253,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                 }
             };
             Canvas.prototype.endLoop = function () {
-                this.setPropertyValue('looping', false);
+                this.setPropertyValue('looping', false, Boolean);
             };
             Canvas.prototype.startLoop = function () {
                 var _this = this;
@@ -255,7 +262,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                 var loop = function () {
                     var now = Date.now();
                     if ((now - start) >= 1000) {
-                        _this.setPropertyValue('fps', frames);
+                        _this.setPropertyValue('fps', frames, Number);
                         start = now;
                         frames = 0;
                     }
@@ -265,7 +272,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                         window.requestAnimationFrame(loop);
                     }
                 };
-                this.setPropertyValue('looping', true);
+                this.setPropertyValue('looping', true, Boolean);
                 window.requestAnimationFrame(loop);
             };
             Canvas.prototype.didSet = function (e) {
@@ -293,7 +300,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             Object.defineProperty(Canvas.prototype, "context", {
                 get: function () {
                     var _this = this;
-                    return this.getLazyProperty('context', function () {
+                    return this.getLazyProperty('context', CanvasRenderingContext2D, function () {
                         return _this.raw.getContext('2d');
                     });
                 },
@@ -302,48 +309,48 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Canvas.prototype, "fps", {
                 get: function () {
-                    return this.getPropertyValue('fps', 0);
+                    return this.getPropertyValue('fps', Number, 0);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Canvas.prototype, "height", {
                 get: function () {
-                    return this.getPropertyValue('height', 0);
+                    return this.getPropertyValue('height', Number, 0);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Canvas.prototype, "illustrator", {
                 get: function () {
-                    return this.getPropertyValue('illustrator', null);
+                    return this.getPropertyValue('illustrator', Illustrator, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('illustrator', value);
+                    this.setPropertyValue('illustrator', value, Illustrator);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Canvas.prototype, "looping", {
                 get: function () {
-                    return this.getPropertyValue('looping', true);
+                    return this.getPropertyValue('looping', Boolean, true);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Canvas.prototype, "theme", {
                 get: function () {
-                    return this.getPropertyValue('theme', new CanvasTheme());
+                    return this.getPropertyValue('theme', CanvasTheme, new CanvasTheme());
                 },
                 set: function (value) {
-                    this.setPropertyValue('theme', value);
+                    this.setPropertyValue('theme', value, CanvasTheme);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Canvas.prototype, "width", {
                 get: function () {
-                    return this.getPropertyValue('width', 0);
+                    return this.getPropertyValue('width', Number, 0);
                 },
                 enumerable: true,
                 configurable: true
@@ -366,7 +373,8 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                     step: step,
                     value: value
                 });
-                this.setPropertyValue('value', String(value), { silent: true });
+                this.setPropertyValue('value', String(value), String, { silent: true });
+                this.divValue.html = String(value);
                 return this;
             };
             Slider.prototype.didSet = function (e) {
@@ -394,20 +402,20 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             };
             Object.defineProperty(Slider.prototype, "text", {
                 get: function () {
-                    return this.getPropertyValue('text', null);
+                    return this.getPropertyValue('text', String, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('text', value);
+                    this.setPropertyValue('text', value, String);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Slider.prototype, "value", {
                 get: function () {
-                    return this.getPropertyValue('value', null);
+                    return this.getPropertyValue('value', String, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('value', value);
+                    this.setPropertyValue('value', value, String);
                 },
                 enumerable: true,
                 configurable: true
@@ -415,7 +423,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             Object.defineProperty(Slider.prototype, "inpRange", {
                 get: function () {
                     var _this = this;
-                    return this.getLazyProperty('inpRange', function () {
+                    return this.getLazyProperty('inpRange', InputElement, function () {
                         return new InputElement()
                             .setAtts({ type: 'range' })
                             .addEventListener('input', function () { return _this.value = _this.inpRange.raw.value; })
@@ -427,7 +435,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Slider.prototype, "divText", {
                 get: function () {
-                    return this.getLazyProperty('divText', function () {
+                    return this.getLazyProperty('divText', DivElement, function () {
                         return new DivElement().addClass('text');
                     });
                 },
@@ -436,7 +444,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Slider.prototype, "divValue", {
                 get: function () {
-                    return this.getLazyProperty('divValue', function () {
+                    return this.getLazyProperty('divValue', DivElement, function () {
                         return new DivElement().addClass('value');
                     });
                 },
@@ -449,7 +457,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             __extends(Workspace, _super);
             function Workspace(illustrator) {
                 var _this = _super.call(this, 'workspace') || this;
-                _this.setPropertyValue('illustrator', illustrator);
+                _this.setPropertyValue('illustrator', illustrator, Illustrator);
                 return _this;
             }
             Workspace.prototype.raise = function (eventName) {
@@ -472,14 +480,37 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                         this.widthSlider,
                         this.heightSlider,
                         this.colorSlider,
+                        this.testLabel
                     ]);
+                    this.testLabel.icon = Optional.of(LinearIcon.cross);
+                    var a = new SplitView();
+                    a.side = Side.LEFT;
+                    a.wide = 100;
+                    a.sideView = Optional.of(ColorView.fromString('f00'));
+                    var b = new SplitView();
+                    b.side = Side.TOP;
+                    b.wide = 100;
+                    var c = new SplitView();
+                    c.side = Side.LEFT;
+                    c.wide = 100;
+                    c.sideView = Optional.of(ColorView.fromString('0f0'));
+                    var d = new SplitView();
+                    d.side = Side.RIGHT;
+                    d.wide = 100;
+                    d.view = Optional.of(ColorView.fromString('f0f'));
+                    d.sideView = Optional.of(ColorView.fromString('0ff'));
+                    a.view = Optional.of(b);
+                    b.view = Optional.of(c);
+                    b.sideView = Optional.of(d);
+                    c.view = Optional.of(ColorView.fromString('00f'));
+                    MainView.instance.view = Optional.of(a);
                     setInterval(function () { return _this.divFps.html = _this.canvas.fps + "fps"; }, 500);
                 }
             };
             Object.defineProperty(Workspace.prototype, "brightnessSlider", {
                 get: function () {
                     var _this = this;
-                    return this.getLazyProperty('brightnessSlider', function () {
+                    return this.getLazyProperty('brightnessSlider', Slider, function () {
                         return new Slider("Brightness")
                             .attachTo(_this.sidebar);
                     });
@@ -490,7 +521,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             Object.defineProperty(Workspace.prototype, "canvas", {
                 get: function () {
                     var _this = this;
-                    return this.getLazyProperty('canvas', function () {
+                    return this.getLazyProperty('canvas', Canvas, function () {
                         return new Canvas(_this.illustrator);
                     });
                 },
@@ -500,7 +531,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             Object.defineProperty(Workspace.prototype, "contrastSlider", {
                 get: function () {
                     var _this = this;
-                    return this.getLazyProperty('contrastSlider', function () {
+                    return this.getLazyProperty('contrastSlider', Slider, function () {
                         return new Slider("Contrast")
                             .attachTo(_this.sidebar);
                     });
@@ -510,7 +541,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Workspace.prototype, "divFps", {
                 get: function () {
-                    return this.getLazyProperty('divFps', function () {
+                    return this.getLazyProperty('divFps', DivElement, function () {
                         return new DivElement('fps');
                     });
                 },
@@ -519,14 +550,14 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Workspace.prototype, "illustrator", {
                 get: function () {
-                    return this.getPropertyValue('illustrator', undefined);
+                    return this.getPropertyValue('illustrator', Illustrator, undefined);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Workspace.prototype, "sidebar", {
                 get: function () {
-                    return this.getLazyProperty('sidebar', function () {
+                    return this.getLazyProperty('sidebar', DivElement, function () {
                         return new DivElement('sidebar');
                     });
                 },
@@ -535,7 +566,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Workspace.prototype, "sizeSlider", {
                 get: function () {
-                    return this.getLazyProperty('sizeSlider', function () {
+                    return this.getLazyProperty('sizeSlider', Slider, function () {
                         return new Slider("Size");
                     });
                 },
@@ -544,7 +575,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Workspace.prototype, "heightSlider", {
                 get: function () {
-                    return this.getLazyProperty('heightSlider', function () {
+                    return this.getLazyProperty('heightSlider', Slider, function () {
                         return new Slider("Height");
                     });
                 },
@@ -553,7 +584,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Workspace.prototype, "widthSlider", {
                 get: function () {
-                    return this.getLazyProperty('widthSlider', function () {
+                    return this.getLazyProperty('widthSlider', Slider, function () {
                         return new Slider("Width");
                     });
                 },
@@ -562,8 +593,17 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
             });
             Object.defineProperty(Workspace.prototype, "colorSlider", {
                 get: function () {
-                    return this.getLazyProperty('colorSlider', function () {
+                    return this.getLazyProperty('colorSlider', Slider, function () {
                         return new Slider("Palette");
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Workspace.prototype, "testLabel", {
+                get: function () {
+                    return this.getLazyProperty('testLabel', Label, function () {
+                        return new Label('Some Text');
                     });
                 },
                 enumerable: true,

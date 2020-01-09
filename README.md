@@ -13,6 +13,7 @@ But things are going to change ;)
 - `npm install` to install modules
 - `npm run test` to run tests
 - `npm run build` to build browser JavaScript
+- `python -m SimpleHTTPServer 8000` Start a simple web server
 
 Configuring Idea IDE Unit Testing:
 Run > Edit Configuration > Extra mocha options: `--require jsdom-global/register`

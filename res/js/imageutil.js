@@ -29,7 +29,7 @@ define(["require", "exports", "./latte"], function (require, exports, latte_1) {
             __extends(ImageStream, _super);
             function ImageStream(canvas) {
                 var _this = _super.call(this) || this;
-                _this.setPropertyValue('canvas', canvas);
+                _this.setPropertyValue('canvas', canvas, HTMLCanvasElement);
                 return _this;
             }
             ImageStream.fromFile = function (file, callback) {
@@ -219,7 +219,7 @@ define(["require", "exports", "./latte"], function (require, exports, latte_1) {
             };
             Object.defineProperty(ImageStream.prototype, "canvas", {
                 get: function () {
-                    return this.getPropertyValue('canvas', undefined);
+                    return this.getPropertyValue('canvas', HTMLCanvasElement, undefined);
                 },
                 enumerable: true,
                 configurable: true

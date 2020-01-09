@@ -84,7 +84,7 @@ export namespace imageutil{
          */
         constructor(canvas: HTMLCanvasElement){
             super();
-            this.setPropertyValue('canvas', canvas);
+            this.setPropertyValue('canvas', canvas, HTMLCanvasElement);
         }
 
         //region Private Methods
@@ -312,7 +312,7 @@ export namespace imageutil{
          * Gets the canvas seed of the image
          */
         get canvas(): HTMLCanvasElement {
-            return this.getPropertyValue('canvas', undefined);
+            return this.getPropertyValue('canvas', HTMLCanvasElement, undefined);
         }
 
 

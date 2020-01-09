@@ -11,9 +11,19 @@ var __extends = (this && this.__extends) || (function () {
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    Object.defineProperty(Number.prototype, "px", {
+        get: function () {
+            return this + 'px';
+        },
+        enumerable: false,
+        configurable: true
+    });
     var latte;
     (function (latte) {
         function _camelCase(s) {
+            var nextUpper = true;
+            var result = "";
+            var skip = false;
             if (s == null) {
                 s = '';
             }
@@ -21,7 +31,28 @@ define(["require", "exports"], function (require, exports) {
             if (s.length == 0) {
                 return s;
             }
-            return s.substr(0, 1).toUpperCase() + s.substr(1);
+            for (var i = 0; i < s.length; i++) {
+                if (skip) {
+                    skip = false;
+                    nextUpper = true;
+                    continue;
+                }
+                else if (nextUpper) {
+                    nextUpper = false;
+                    result += s.charAt(i).toUpperCase();
+                    continue;
+                }
+                else {
+                    result += s.charAt(i);
+                }
+                if (i < s.length - 1) {
+                    var chr = s.charAt(i + 1);
+                    if (chr == ' ' || chr == '_') {
+                        skip = true;
+                    }
+                }
+            }
+            return result;
         }
         latte._camelCase = _camelCase;
         function _isArray(param, minLength) {
@@ -59,11 +90,12 @@ define(["require", "exports"], function (require, exports) {
         }
         latte._repeat = _repeat;
         function _zeroPad(n) {
+            n = n || 0;
             return n <= 9 ? '0' + n.toString() : n.toString();
         }
         latte._zeroPad = _zeroPad;
         function _zeroFill(positions, n, chr) {
-            if (positions === void 0) { positions = 3; }
+            if (positions === void 0) { positions = 2; }
             if (chr === void 0) { chr = '0'; }
             var s = String(n);
             var zeros = positions - s.length;
@@ -109,38 +141,242 @@ define(["require", "exports"], function (require, exports) {
             return result.join('');
         }
         latte.sprintf = sprintf;
-        var Color = (function () {
+        var Side;
+        (function (Side) {
+            Side[Side["TOP"] = 0] = "TOP";
+            Side[Side["RIGHT"] = 1] = "RIGHT";
+            Side[Side["BOTTOM"] = 2] = "BOTTOM";
+            Side[Side["LEFT"] = 3] = "LEFT";
+        })(Side = latte.Side || (latte.Side = {}));
+        var Orientation;
+        (function (Orientation) {
+            Orientation[Orientation["VERTICAL"] = 0] = "VERTICAL";
+            Orientation[Orientation["HORIZONTAL"] = 1] = "HORIZONTAL";
+        })(Orientation = latte.Orientation || (latte.Orientation = {}));
+        var Eventable = (function () {
+            function Eventable() {
+                this.eventHandlers = {};
+            }
+            Eventable.prototype.on = function (eventName, handler) {
+                if (!(eventName in this.eventHandlers)) {
+                    this.eventHandlers[eventName] = [];
+                }
+                this.eventHandlers[eventName].push(handler);
+                return this;
+            };
+            Eventable.prototype.onBeforeEvent = function (eventName, params) {
+            };
+            Eventable.prototype.onEvent = function (eventName, params) {
+            };
+            Eventable.prototype.raise = function (eventName) {
+                var _this = this;
+                var params = [];
+                for (var _i = 1; _i < arguments.length; _i++) {
+                    params[_i - 1] = arguments[_i];
+                }
+                this.onBeforeEvent(eventName, params);
+                if (eventName in this.eventHandlers) {
+                    for (var name_1 in this.eventHandlers) {
+                        this.eventHandlers[name_1].forEach(function (f) { return f.apply(_this, params); });
+                    }
+                }
+                this.onEvent(eventName, params);
+            };
+            return Eventable;
+        }());
+        latte.Eventable = Eventable;
+        var Any = (function () {
+            function Any() {
+            }
+            return Any;
+        }());
+        latte.Any = Any;
+        var PropertyTarget = (function (_super) {
+            __extends(PropertyTarget, _super);
+            function PropertyTarget() {
+                var _this = _super !== null && _super.apply(this, arguments) || this;
+                _this.propertyValues = {};
+                return _this;
+            }
+            PropertyTarget.getStaticObject = function (eventObj) {
+                if (!('staticProperties' in eventObj)) {
+                    eventObj.staticProperties = new PropertyTarget();
+                }
+                return eventObj.staticProperties;
+            };
+            PropertyTarget.getStaticPropertyValue = function (classObj, name, validator, withDefault) {
+                if (withDefault === void 0) { withDefault = undefined; }
+                return PropertyTarget.getStaticObject(classObj).getPropertyValue(name, validator, withDefault);
+            };
+            PropertyTarget.hasStaticPropertyValue = function (className, name) {
+                return PropertyTarget.getStaticObject(className).hasPropertyValue(name);
+            };
+            PropertyTarget.setStaticPropertyValue = function (className, name, validator, value, options) {
+                if (options === void 0) { options = {}; }
+                return PropertyTarget.getStaticObject(className).setPropertyValue(name, value, validator, options);
+            };
+            PropertyTarget.getStaticLazyProperty = function (className, name, validator, creator) {
+                return PropertyTarget.getStaticObject(className).getLazyProperty(name, validator, creator);
+            };
+            PropertyTarget.prototype.willSet = function (e) {
+                this.raise('willSet' + _camelCase(e.property), e);
+            };
+            PropertyTarget.prototype.didSet = function (e) {
+                this.raise('didSet' + _camelCase(e.property), e);
+            };
+            PropertyTarget.prototype.valid = function (value, validator) {
+                if (validator === null) {
+                    return true;
+                }
+                if (validator === Number) {
+                    return _isNumber(value);
+                }
+                else if (validator === Boolean) {
+                    return _isBoolean(value);
+                }
+                else if (validator === String) {
+                    return _isString(value);
+                }
+                else if (validator === Any) {
+                    return true;
+                }
+                else {
+                    return value instanceof validator;
+                }
+                return true;
+            };
+            PropertyTarget.prototype.deleteProperty = function (name) {
+                if (name in this.propertyValues) {
+                    delete this.propertyValues[name];
+                }
+            };
+            PropertyTarget.prototype.getPropertyValue = function (name, validator, withDefault) {
+                if (!(name in this.propertyValues)) {
+                    this.propertyValues[name] = withDefault;
+                }
+                return this.propertyValues[name];
+            };
+            PropertyTarget.prototype.getLazyProperty = function (name, validator, creator) {
+                if (!(name in this.propertyValues)) {
+                    this.propertyValues[name] = creator();
+                }
+                return this.getPropertyValue(name, validator, undefined);
+            };
+            PropertyTarget.prototype.hasPropertyValue = function (name) {
+                return name in this.propertyValues;
+            };
+            PropertyTarget.prototype.setPropertyValue = function (name, value, validator, options) {
+                if (options === void 0) { options = {}; }
+                var oldValue = this.getPropertyValue(name, validator, undefined);
+                var data = {
+                    property: name,
+                    oldValue: oldValue,
+                    newValue: value
+                };
+                this.willSet(data);
+                var changed = oldValue !== data.newValue;
+                if (!this.valid(data.newValue, validator)) {
+                    throw "Invalid property value";
+                }
+                if (changed) {
+                    this.propertyValues[name] = data.newValue;
+                    if (options.silent !== true) {
+                        this.didSet(data);
+                    }
+                }
+                return value;
+            };
+            PropertyTarget.prototype.setPropertyUnsafe = function (name, value) {
+                this.propertyValues[name] = value;
+                return value;
+            };
+            PropertyTarget.prototype.setPropertyValues = function (values) {
+                for (var i in values) {
+                    this.setPropertyValue(i, values[i], null);
+                }
+                return this;
+            };
+            return PropertyTarget;
+        }(Eventable));
+        latte.PropertyTarget = PropertyTarget;
+        var Optional = (function (_super) {
+            __extends(Optional, _super);
+            function Optional(value) {
+                var _this = _super.call(this) || this;
+                _this.value = value;
+                return _this;
+            }
+            Optional.empty = function () {
+                return new Optional(null);
+            };
+            Optional.of = function (value) {
+                return new Optional(value);
+            };
+            Optional.prototype.elseDo = function (callback) {
+                if (!this.isPresent) {
+                    callback();
+                }
+                return this;
+            };
+            Optional.prototype.ifPresent = function (callback) {
+                if (this.isPresent) {
+                    callback(this.value);
+                }
+                return this;
+            };
+            Optional.prototype.orElse = function (value) {
+                if (this.isPresent) {
+                    return this.value;
+                }
+                else {
+                    return value;
+                }
+            };
+            Optional.prototype.orThrow = function (ex) {
+                if (ex === void 0) { ex = "Value Needed"; }
+                if (!this.isPresent) {
+                    throw ex;
+                }
+                return this.value;
+            };
+            Object.defineProperty(Optional.prototype, "isPresent", {
+                get: function () {
+                    return this.value !== null;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            return Optional;
+        }(PropertyTarget));
+        latte.Optional = Optional;
+        var Color = (function (_super) {
+            __extends(Color, _super);
             function Color(r, g, b, a) {
                 if (r === void 0) { r = 0; }
                 if (g === void 0) { g = 0; }
                 if (b === void 0) { b = 0; }
                 if (a === void 0) { a = 255; }
-                this._a = 255;
-                this.r = r;
-                this.g = g;
-                this.b = b;
-                this.a = a;
+                var _this = _super.call(this) || this;
+                _this.r = r;
+                _this.g = g;
+                _this.b = b;
+                _this.a = a;
+                return _this;
             }
-            Color.fromHex = function (hexColor) {
-                if (_isString(hexColor)) {
-                    if (hexColor.toLowerCase() == 'white') {
-                        hexColor = '#FFF';
-                    }
-                    if (hexColor.toLowerCase() == 'black') {
-                        hexColor = '#000';
-                    }
-                    if (hexColor.toLowerCase() == 'gray') {
-                        hexColor = '#777';
-                    }
-                    if (hexColor.length == 0) {
-                        hexColor = '#000';
-                    }
+            Color.combine = function () {
+                var colors = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    colors[_i] = arguments[_i];
                 }
+                var avg = function (nums) { return Math.round(nums.reduce(function (acc, cur) { return cur + acc; }) / nums.length); };
+                return new Color(avg(colors.map(function (c) { return c.r; })), avg(colors.map(function (c) { return c.g; })), avg(colors.map(function (c) { return c.b; })));
+            };
+            Color.fromHex = function (hexColor) {
                 if (!_isString(hexColor) || hexColor.length == 0)
                     throw "Invalid Hex: " + hexColor;
                 if (hexColor.charAt(0) == '#')
                     hexColor = hexColor.substr(1);
-                if (!(hexColor.length == 3 || hexColor.length == 6 || hexColor.length == 9))
+                if (!(hexColor.length == 3 || hexColor.length == 6 || hexColor.length == 8))
                     throw "Invalid Hex: " + hexColor;
                 var c = new latte.Color();
                 var toDecimal = function (hex) { return parseInt(hex, 16); };
@@ -153,16 +389,19 @@ define(["require", "exports"], function (require, exports) {
                     c.r = (toDecimal(hexColor.charAt(0) + hexColor.charAt(1)));
                     c.g = (toDecimal(hexColor.charAt(2) + hexColor.charAt(3)));
                     c.b = (toDecimal(hexColor.charAt(4) + hexColor.charAt(5)));
-                    if (hexColor.length == 9)
+                    if (hexColor.length == 8)
                         c.a = (toDecimal(hexColor.charAt(6) + hexColor.charAt(7)));
                 }
                 return c;
             };
+            Color.fromInt32 = function (n) {
+                return new Color(n & 0xff, (n & 0xff00) >>> 8, (n & 0xff0000) >>> 16, (n & 0xFF000000) >>> 24);
+            };
             Color.cmykToRgb = function (c, m, y, k) {
                 return [
-                    255 * (1 - c) * (1 - k),
-                    255 * (1 - m) * (1 - k),
-                    255 * (1 - y) * (1 - k)
+                    Math.round(255 * (1 - c) * (1 - k)),
+                    Math.round(255 * (1 - m) * (1 - k)),
+                    Math.round(255 * (1 - y) * (1 - k))
                 ];
             };
             Color.hsvToRgb = function (h, s, v) {
@@ -172,8 +411,6 @@ define(["require", "exports"], function (require, exports) {
                 h = Math.max(0, Math.min(360, h));
                 s = Math.max(0, Math.min(100, s));
                 v = Math.max(0, Math.min(100, v));
-                s /= 100;
-                v /= 100;
                 if (s == 0) {
                     r = g = b = v;
                     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
@@ -266,70 +503,73 @@ define(["require", "exports"], function (require, exports) {
                 }
                 return [
                     Math.round(h * 360),
-                    Math.round(s * 100),
-                    Math.round(v * 100)
+                    Math.round(s),
+                    Math.round(v)
                 ];
             };
             Object.defineProperty(Color, "black", {
                 get: function () {
-                    if (!this._black) {
-                        this._black = new Color(0, 0, 0);
-                    }
-                    return this._black;
+                    return PropertyTarget.getStaticLazyProperty(Color, 'black', Color, function () {
+                        return new Color(0, 0, 0);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color, "white", {
                 get: function () {
-                    if (!this._white) {
-                        this._white = new Color(255, 255, 255);
-                    }
-                    return this._white;
+                    return PropertyTarget.getStaticLazyProperty(Color, 'white', Color, function () {
+                        return new Color(255, 255, 255);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color, "red", {
                 get: function () {
-                    if (!this._red) {
-                        this._red = new Color(255, 0, 0);
-                    }
-                    return this._red;
+                    return PropertyTarget.getStaticLazyProperty(Color, 'red', Color, function () {
+                        return new Color(255, 0, 0);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color, "green", {
                 get: function () {
-                    if (!this._green) {
-                        this._green = new Color(0, 128, 0);
-                    }
-                    return this._green;
+                    return PropertyTarget.getStaticLazyProperty(Color, 'green', Color, function () {
+                        return new Color(0, 128, 0);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color, "blue", {
                 get: function () {
-                    if (!this._blue) {
-                        this._blue = new Color(0, 0, 255);
-                    }
-                    return this._blue;
+                    return PropertyTarget.getStaticLazyProperty(Color, 'blue', Color, function () {
+                        return new Color(0, 0, 255);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color, "transparent", {
                 get: function () {
-                    if (!this._transparent) {
-                        this._transparent = new Color(0, 0, 0, 0);
-                    }
-                    return this._transparent;
+                    return PropertyTarget.getStaticLazyProperty(Color, 'transparent', Color, function () {
+                        return new Color(0, 0, 0, 0);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
+            Color.prototype.equals = function (c) {
+                return c.a == this.a && c.r === this.r && c.g === this.g && c.b === this.b;
+            };
+            Color.prototype.fade = function (alpha) {
+                return new Color(this.r, this.g, this.b, alpha);
+            };
+            Color.prototype.fadeFloat = function (alphaFloat) {
+                return new Color(this.r, this.g, this.b, alphaFloat * 255);
+            };
             Color.prototype.toHexString = function () {
                 var d = function (s) { if (s.length == 1)
                     return '0' + s; return s; };
@@ -340,15 +580,21 @@ define(["require", "exports"], function (require, exports) {
                     return '#' + d(this.r.toString(16)) + d(this.g.toString(16)) + d(this.b.toString(16));
                 }
             };
+            Color.prototype.toInt32 = function () {
+                return (this.a << 24) |
+                    (this.b << 16) |
+                    (this.g << 8) |
+                    this.r;
+            };
             Color.prototype.toRgbString = function () {
-                return "rgba(" + this.r + ", " + this.g + ", " + this.b + ")";
+                return sprintf('rgba(%s, %s, %s, %s)', this.r, this.g, this.b, this.a);
             };
             Color.prototype.toString = function () {
                 if (this.isTransparent) {
                     return 'transparent';
                 }
                 else if (this.a != 255) {
-                    return "rgba(" + this.r + ", " + this.g + ", " + this.b + ", " + this.a + ")";
+                    return this.toRgbString();
                 }
                 else {
                     return this.toHexString();
@@ -356,22 +602,20 @@ define(["require", "exports"], function (require, exports) {
             };
             Object.defineProperty(Color.prototype, "a", {
                 get: function () {
-                    return this._a;
+                    return this.getPropertyValue('a', Number, 255);
                 },
                 set: function (value) {
-                    this._a = value;
+                    this.setPropertyValue('a', value, Number);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color.prototype, "b", {
                 get: function () {
-                    return this._b;
+                    return this.getPropertyValue('b', Number, 0);
                 },
                 set: function (value) {
-                    if (value < 0 || value > 255)
-                        throw "Invalid Blue";
-                    this._b = value;
+                    this.setPropertyValue('b', value, Number);
                 },
                 enumerable: true,
                 configurable: true
@@ -380,20 +624,15 @@ define(["require", "exports"], function (require, exports) {
                 get: function () {
                     return (1 - (this.r / 255) - this.k) / (1 - this.k);
                 },
-                set: function (value) {
-                    this.r = 255 * (1 - value) * (1 - this.k);
-                },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Color.prototype, "g", {
                 get: function () {
-                    return this._g;
+                    return this.getPropertyValue('g', Number, 0);
                 },
                 set: function (value) {
-                    if (value < 0 || value > 255)
-                        throw "Invalid Green";
-                    this._g = value;
+                    this.setPropertyValue('g', value, Number);
                 },
                 enumerable: true,
                 configurable: true
@@ -419,12 +658,6 @@ define(["require", "exports"], function (require, exports) {
                 enumerable: true,
                 configurable: true
             });
-            Color.prototype.fade = function (alpha) {
-                return new Color(this.r, this.g, this.b, alpha);
-            };
-            Color.prototype.fadeFloat = function (alpha) {
-                return new Color(this.r, this.g, this.b, alpha * 255);
-            };
             Object.defineProperty(Color.prototype, "isDark", {
                 get: function () {
                     return this.perceivedLuminosity > 0.5;
@@ -456,52 +689,133 @@ define(["require", "exports"], function (require, exports) {
             });
             Object.defineProperty(Color.prototype, "r", {
                 get: function () {
-                    return this._r;
+                    return this.getPropertyValue('r', Number, 0);
                 },
                 set: function (value) {
-                    if (value < 0 || value > 255)
-                        throw "Invalid Red";
-                    this._r = value;
+                    this.setPropertyValue('r', value, Number);
                 },
                 enumerable: true,
                 configurable: true
             });
             return Color;
-        }());
+        }(PropertyTarget));
         latte.Color = Color;
-        var TimeSpan = (function () {
+        var TimeSpan = (function (_super) {
+            __extends(TimeSpan, _super);
             function TimeSpan(days, hours, minutes, seconds, milliseconds) {
                 if (days === void 0) { days = 0; }
                 if (hours === void 0) { hours = 0; }
                 if (minutes === void 0) { minutes = 0; }
                 if (seconds === void 0) { seconds = 0; }
                 if (milliseconds === void 0) { milliseconds = 0; }
-                this.millis = 0;
-                this.millis = (days * 86400 + hours * 3600 + minutes * 60 + seconds) * 1000 + milliseconds;
+                var _this = _super.call(this) || this;
+                _this.millis = 0;
+                if (days < 0 || hours < 0 || minutes < 0 || seconds < 0 || milliseconds < 0) {
+                    throw "Parameters on constructor can't be negative";
+                }
+                _this.millis = (days * 86400 + hours * 3600 + minutes * 60 + seconds) * 1000 + milliseconds;
+                if (!Number.isSafeInteger(_this.millis)) {
+                    throw "Total milliseconds must be a safe integer";
+                }
+                return _this;
             }
+            Object.defineProperty(TimeSpan, "MAX_VALUE", {
+                get: function () {
+                    return PropertyTarget.getStaticLazyProperty(TimeSpan, 'MAX_VALUE', TimeSpan, function () {
+                        return TimeSpan.fromMilliseconds(Number.MAX_SAFE_INTEGER);
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(TimeSpan, "MIN_VALUE", {
+                get: function () {
+                    return PropertyTarget.getStaticLazyProperty(TimeSpan, 'MIN_VALUE', TimeSpan, function () {
+                        return TimeSpan.fromMilliseconds(Number.MIN_SAFE_INTEGER * -1).negate();
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
             TimeSpan.fromDays = function (days) {
-                return new TimeSpan(days);
+                var negate = days < 0;
+                var result = new TimeSpan(Math.abs(days));
+                if (negate) {
+                    result.negate();
+                }
+                return result;
             };
             TimeSpan.fromHours = function (hours) {
-                return new TimeSpan(0, hours);
+                var negate = hours < 0;
+                var result = new TimeSpan(0, Math.abs(hours));
+                if (negate) {
+                    result.negate();
+                }
+                return result;
             };
             TimeSpan.fromMilliseconds = function (milliseconds) {
-                var t = new TimeSpan();
-                t.millis = milliseconds;
+                var negate = milliseconds < 0;
+                var t = new TimeSpan(0, 0, 0, 0, Math.abs(milliseconds));
+                if (negate) {
+                    t.negate();
+                }
                 return t;
             };
             TimeSpan.fromMinutes = function (minutes) {
-                return new TimeSpan(0, 0, minutes);
+                var negate = minutes < 0;
+                var result = new TimeSpan(0, 0, Math.abs(minutes));
+                if (negate) {
+                    result.negate();
+                }
+                return result;
             };
             TimeSpan.fromSeconds = function (seconds) {
-                return new TimeSpan(0, 0, 0, seconds);
+                var negate = seconds < 0;
+                var result = new TimeSpan(0, 0, 0, Math.abs(seconds));
+                if (negate) {
+                    result.negate();
+                }
+                return result;
             };
             TimeSpan.fromString = function (timeString) {
                 var parts = timeString.split(':');
-                var hours = parts.length > 0 && _isNumeric(parts[0]) ? parseInt(parts[0], 10) : 0;
-                var minutes = parts.length > 1 && _isNumeric(parts[1]) ? parseInt(parts[1], 10) : 0;
-                var seconds = parts.length > 2 && _isNumeric(parts[2]) ? parseInt(parts[2], 10) : 0;
-                return new TimeSpan(0, hours, minutes, seconds);
+                if (parts.length !== 3) {
+                    throw "Wrong format: [D] hh:mm:ss[.millis]";
+                }
+                var negate = timeString.trim().indexOf('-') === 0;
+                var first = parts[0];
+                var middle = parts[1];
+                var last = parts[2];
+                var days = 0;
+                var hours = 0;
+                var minutes = parseInt(middle, 10);
+                var seconds = 0;
+                var milliseconds = 0;
+                if (first.indexOf(' ') >= 0) {
+                    var firstParts = first.split(' ');
+                    if (firstParts.length != 2)
+                        throw "Invalid format of first part: Days + space + hours";
+                    days = parseInt(firstParts[0], 10);
+                    hours = parseInt(firstParts[1], 10);
+                }
+                else {
+                    hours = parseInt(first, 10);
+                }
+                if (last.indexOf('.') >= 0) {
+                    var lastParts = last.split('.');
+                    if (lastParts.length != 2)
+                        throw "Invalid format of last part: Seconds + dot + milliseconds";
+                    seconds = parseInt(lastParts[0], 10);
+                    milliseconds = parseInt(lastParts[1], 10) * 100;
+                }
+                else {
+                    seconds = parseInt(last, 10);
+                }
+                var result = new TimeSpan(days, hours, minutes, seconds, milliseconds);
+                if (negate) {
+                    result.negate();
+                }
+                return result;
             };
             TimeSpan.timeSince = function (d) {
                 return DateTime.now.subtractDate(d);
@@ -527,22 +841,14 @@ define(["require", "exports"], function (require, exports) {
                 return this.add(new TimeSpan(0, 0, 0, seconds));
             };
             TimeSpan.prototype.compareTo = function (timespan) {
-                if (this.millis > timespan.millis)
-                    return 1;
-                if (this.millis == timespan.millis)
-                    return 0;
-                if (this.millis < timespan.millis)
-                    return -1;
-                throw "?";
-            };
-            TimeSpan.prototype.duration = function () {
-                return new TimeSpan(Math.abs(this.millis));
+                return this.millis - timespan.millis;
             };
             TimeSpan.prototype.equals = function (timespan) {
                 return this.millis == timespan.millis;
             };
             TimeSpan.prototype.negate = function () {
                 this.millis *= -1;
+                return this;
             };
             TimeSpan.prototype.subtract = function (timespan) {
                 return TimeSpan.fromMilliseconds(this.millis - timespan.millis);
@@ -550,11 +856,11 @@ define(["require", "exports"], function (require, exports) {
             TimeSpan.prototype.toString = function (includeMilliseconds) {
                 if (includeMilliseconds === void 0) { includeMilliseconds = false; }
                 return (this.millis < 0 ? '-' : '') +
-                    (this.days ? this.days + ' ' : '') +
-                    this._zeroPad(this.hours) + ":" +
-                    this._zeroPad(this.minutes) +
-                    (this.seconds ? ':' + this._zeroPad(this.seconds) : '') +
-                    (includeMilliseconds ? '.' + Math.abs(this.milliseconds) : '');
+                    (this.days ? Math.abs(this.days) + ' ' : '') +
+                    this._zeroPad(Math.abs(this.hours)) + ":" +
+                    this._zeroPad(Math.abs(this.minutes)) + ':' +
+                    this._zeroPad(Math.abs(this.seconds)) +
+                    (includeMilliseconds ? '.' + _zeroFill(3, Math.abs(this.milliseconds)) : '');
             };
             TimeSpan.prototype.valueOf = function () {
                 return this.millis;
@@ -637,9 +943,10 @@ define(["require", "exports"], function (require, exports) {
                 configurable: true
             });
             return TimeSpan;
-        }());
+        }(PropertyTarget));
         latte.TimeSpan = TimeSpan;
-        var DateTime = (function () {
+        var DateTime = (function (_super) {
+            __extends(DateTime, _super);
             function DateTime(year, month, day, hour, minute, second, millisecond) {
                 if (year === void 0) { year = 1; }
                 if (month === void 0) { month = 1; }
@@ -648,9 +955,32 @@ define(["require", "exports"], function (require, exports) {
                 if (minute === void 0) { minute = null; }
                 if (second === void 0) { second = null; }
                 if (millisecond === void 0) { millisecond = null; }
+                var _this = _super.call(this) || this;
+                if (year <= 0 || month <= 0 || day <= 0) {
+                    throw "No argument can be <= 0";
+                }
                 var days = DateTime.absoluteDays(year, month, day);
-                this._span = new TimeSpan(days, hour, minute, second, millisecond);
+                _this._span = new TimeSpan(days, hour, minute, second, millisecond);
+                return _this;
             }
+            Object.defineProperty(DateTime, "MAX_VALUE", {
+                get: function () {
+                    return PropertyTarget.getStaticLazyProperty(DateTime, 'MAX_VALUE', DateTime, function () {
+                        return DateTime.fromMilliseconds(Number.MAX_SAFE_INTEGER);
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(DateTime, "MIN_VALUE", {
+                get: function () {
+                    return PropertyTarget.getStaticLazyProperty(DateTime, 'MIN_VALUE', DateTime, function () {
+                        return new DateTime(1, 1, 1);
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
             DateTime.absoluteDays = function (year, month, day) {
                 var div = function (a, b) { return Math.floor(a / b); };
                 var arr = DateTime.isLeapYear(year) ?
@@ -677,27 +1007,27 @@ define(["require", "exports"], function (require, exports) {
             };
             DateTime.fromString = function (dateTimeString) {
                 if (dateTimeString.length === 0)
-                    return new DateTime();
+                    throw "Invalid date format";
                 var year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
                 var parts = dateTimeString.split(' ');
                 var dateParts = parts.length > 0 ? parts[0].split('-') : [];
-                var timeParts = parts.length > 1 ? parts[1].split(':') : [];
+                var timeOfDay = parts.length > 1 ? TimeSpan.fromString(parts[1]) : new TimeSpan();
                 if (dateParts.length === 3) {
                     year = parseInt(dateParts[0], 10);
                     month = parseInt(dateParts[1], 10);
                     day = parseInt(dateParts[2], 10);
+                    if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                        throw "Date has invalid numbers";
+                    }
                 }
-                if (timeParts.length === 3) {
-                    hour = parseInt(timeParts[0], 10);
-                    minute = parseInt(timeParts[1], 10);
-                    second = parseInt(timeParts[2], 10);
+                else {
+                    throw "Invalid date format";
                 }
-                if (year <= 0)
-                    year = 1;
-                if (month <= 0)
-                    month = 1;
-                if (day <= 0)
-                    day = 1;
+                hour = timeOfDay.hours;
+                minute = timeOfDay.minutes;
+                second = timeOfDay.seconds;
+                if (year <= 0 || month <= 0 || day < 0)
+                    throw "Date components can't be lower than one.";
                 return new DateTime(year, month, day, hour, minute, second);
             };
             DateTime.isLeapYear = function (year) {
@@ -819,7 +1149,7 @@ define(["require", "exports"], function (require, exports) {
                 }
             };
             DateTime.prototype.addSeconds = function (seconds) {
-                return new DateTime(this._span.millis + seconds * 1000);
+                return DateTime.fromMilliseconds(this._span.millis + seconds * 1000);
             };
             DateTime.prototype.addYears = function (years) {
                 return this.addMonths(years * 12);
@@ -838,6 +1168,9 @@ define(["require", "exports"], function (require, exports) {
             };
             DateTime.prototype.subtractTime = function (timespan) {
                 return DateTime.fromMilliseconds(this._span.millis - timespan.millis);
+            };
+            DateTime.prototype.toMilliseconds = function () {
+                return this._span.totalMilliseconds;
             };
             DateTime.prototype.toString = function (includeTime) {
                 if (includeTime === void 0) { includeTime = true; }
@@ -876,13 +1209,6 @@ define(["require", "exports"], function (require, exports) {
             Object.defineProperty(DateTime.prototype, "dayOfYear", {
                 get: function () {
                     return this.fromTimeSpan("dayyear");
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(DateTime.prototype, "comparer", {
-                get: function () {
-                    return this._span.totalMilliseconds;
                 },
                 enumerable: true,
                 configurable: true
@@ -961,7 +1287,7 @@ define(["require", "exports"], function (require, exports) {
             DateTime.monthDays = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
             DateTime.monthDaysLeapYear = [0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
             return DateTime;
-        }());
+        }(PropertyTarget));
         latte.DateTime = DateTime;
         var OldEventHandler = (function () {
             function OldEventHandler(handler, context) {
@@ -1023,28 +1349,28 @@ define(["require", "exports"], function (require, exports) {
             return LatteEvent_deprecated;
         }());
         latte.LatteEvent_deprecated = LatteEvent_deprecated;
-        var Point = (function () {
+        var Point = (function (_super) {
+            __extends(Point, _super);
             function Point(x, y) {
                 if (x === void 0) { x = null; }
                 if (y === void 0) { y = null; }
-                this._x = null;
-                this._y = null;
-                if (x !== null) {
-                    this._x = x;
-                }
-                if (y !== null) {
-                    this._y = y;
-                }
+                var _this = _super.call(this) || this;
+                _this.setPropertyValue('x', x, Number);
+                _this.setPropertyValue('y', y, Number);
+                return _this;
             }
             Point.distance = function (a, b) {
                 return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
             };
-            Point.empty = function () {
-                return new Point(null, null);
-            };
-            Point.origin = function () {
-                return new Point(0, 0);
-            };
+            Object.defineProperty(Point, "origin", {
+                get: function () {
+                    return PropertyTarget.getStaticLazyProperty(Point, 'origin', Point, function () {
+                        return new Point(0, 0);
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
             Point.prototype.distanceTo = function (p) {
                 return Point.distance(this, p);
             };
@@ -1054,313 +1380,60 @@ define(["require", "exports"], function (require, exports) {
             Point.prototype.offset = function (x, y) {
                 return new Point(this.x + x, this.y + y);
             };
-            Point.prototype.toString = function () {
-                return sprintf("Point(%s, %s)", this._x, this._y);
+            Point.prototype.round = function () {
+                return new Point(Math.round(this.x), Math.round(this.y));
             };
-            Object.defineProperty(Point.prototype, "isEmpty", {
+            Point.prototype.toString = function () {
+                return sprintf("(%s, %s)", this.x, this.y);
+            };
+            Object.defineProperty(Point.prototype, "isOrigin", {
                 get: function () {
-                    return this._x == null || this._y == null;
+                    return this.x === 0 && this.y === 0;
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Point.prototype, "x", {
                 get: function () {
-                    return this._x;
-                },
-                set: function (value) {
-                    this._x = value;
+                    return this.getPropertyValue('x', Number, null);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Point.prototype, "y", {
                 get: function () {
-                    return this._y;
-                },
-                set: function (value) {
-                    this._y = value;
+                    return this.getPropertyValue('y', Number, null);
                 },
                 enumerable: true,
                 configurable: true
             });
             return Point;
-        }());
+        }(PropertyTarget));
         latte.Point = Point;
-        var Rectangle = (function () {
-            function Rectangle(left, top, width, height) {
-                if (left === void 0) { left = 0; }
-                if (top === void 0) { top = 0; }
+        var Size = (function (_super) {
+            __extends(Size, _super);
+            function Size(width, height) {
                 if (width === void 0) { width = 0; }
                 if (height === void 0) { height = 0; }
-                this.top = top;
-                this.left = left;
-                this.width = width;
-                this.height = height;
+                var _this = _super.call(this) || this;
+                _this.setPropertyValue('width', width, Number);
+                _this.setPropertyValue('height', height, Number);
+                return _this;
             }
-            Rectangle.empty = function () {
-                return new Rectangle();
-            };
-            Rectangle.fromLRTB = function (left, right, top, bottom) {
-                var r = new Rectangle(left, top);
-                r.right = right;
-                r.bottom = bottom;
-                return r;
-            };
-            Rectangle.fromObject = function (obj) {
-                return new Rectangle(obj.left, obj.top, obj.width, obj.height);
-            };
-            Rectangle.fromObjectLFTB = function (obj) {
-                return Rectangle.fromLRTB(obj.left, obj.right, obj.top, obj.bottom);
-            };
-            Rectangle.fromElement = function (e) {
-                return Rectangle.fromObject(e.getBoundingClientRect());
-            };
-            Rectangle.prototype.absolute = function () {
-                var width = Math.abs(this.width);
-                var height = Math.abs(this.height);
-                var left = this.width < 0 ? this.right : this.left;
-                var top = this.height < 0 ? this.bottom : this.top;
-                return new Rectangle(left, top, width, height);
-            };
-            Rectangle.prototype.ceil = function () {
-                var r = Math.ceil;
-                return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
-            };
-            Rectangle.prototype.centerOn = function (container) {
-                var c = new Rectangle(container.left + (container.width - this.width) / 2, container.top + (container.height - this.height) / 2, this.width, this.height);
-                return c;
-            };
-            Rectangle.prototype.clone = function () {
-                return new Rectangle(this.left, this.top, this.width, this.height);
-            };
-            Rectangle.prototype.contains = function (x, y) {
-                return this.left <= x && x <= this.right && this.top <= y && y <= this.bottom;
-            };
-            Rectangle.prototype.containsRectangle = function (rectangle) {
-                return this.contains(rectangle.left, rectangle.top) && this.contains(rectangle.right, rectangle.bottom);
-            };
-            Rectangle.prototype.equals = function (r) {
-                if (!r)
-                    return false;
-                return this.left == r.left && this.top == this.top && this.width == r.width && this.height == r.height;
-            };
-            Rectangle.prototype.floor = function () {
-                var r = Math.floor;
-                return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
-            };
-            Rectangle.prototype.inflate = function (horizontal, vertical) {
-                return Rectangle.fromLRTB(this.left - horizontal, this.right + horizontal, this.top - vertical, this.bottom + vertical);
-            };
-            Rectangle.prototype.intersection = function (rectangle) {
-                var a = this;
-                var b = rectangle;
-                var x1 = Math.max(a.left, b.left);
-                var x2 = Math.min(a.right, b.right);
-                var y1 = Math.max(a.top, b.top);
-                var y2 = Math.min(a.bottom, b.bottom);
-                if (x2 >= x1 && y2 >= y1) {
-                    return new Rectangle(x1, y1, x2 - x1, y2 - y1);
-                }
-                return new Rectangle();
-            };
-            Rectangle.prototype.intersects = function (rectangle) {
-                var thisX = this.left;
-                var thisY = this.top;
-                var thisW = this.width;
-                var thisH = this.height;
-                var rectX = rectangle.left;
-                var rectY = rectangle.top;
-                var rectW = rectangle.width;
-                var rectH = rectangle.height;
-                return (rectX < thisX + thisW) && (thisX < (rectX + rectW)) && (rectY < thisY + thisH) && (thisY < rectY + rectH);
-            };
-            Rectangle.prototype.round = function () {
-                var r = Math.round;
-                return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
-            };
-            Rectangle.prototype.scaleToFit = function (size) {
-                var outer = new Rectangle(this.left, this.top, size.width, size.height);
-                var inner = this.clone();
-                var resizeFactor = inner.aspectRatio >= outer.aspectRatio ?
-                    (outer.width / inner.width) : (outer.height / inner.height);
-                var newWidth = inner.width * resizeFactor;
-                var newHeight = inner.height * resizeFactor;
-                return new Rectangle(this.left, this.top, newWidth, newHeight);
-            };
-            Rectangle.prototype.scaleToHeight = function (height) {
-                return new Rectangle(this.left, this.top, height * this.width / this.height, height);
-            };
-            Rectangle.prototype.scaleToWidth = function (width) {
-                return new Rectangle(this.left, this.top, width, width * this.height / this.width);
-            };
-            Rectangle.prototype.toString = function () {
-                return "Rectangle: " + [this._left, this._top, this._width, this._height].join(', ');
-            };
-            Rectangle.prototype.union = function (rectangle) {
-                return Rectangle.fromLRTB(Math.min(this.left, rectangle.left), Math.max(this.right, rectangle.right), Math.min(this.top, rectangle.top), Math.max(this.bottom, rectangle.bottom));
-            };
-            Object.defineProperty(Rectangle.prototype, "area", {
+            Object.defineProperty(Size, "empty", {
                 get: function () {
-                    return this.width * this.height;
+                    return PropertyTarget.getStaticLazyProperty(Size, 'empty', Size, function () {
+                        return new Size(0, 0);
+                    });
                 },
                 enumerable: true,
                 configurable: true
             });
-            Object.defineProperty(Rectangle.prototype, "aspectRatio", {
-                get: function () {
-                    return this.width / this.height;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "bottom", {
-                get: function () {
-                    return this._top + this._height;
-                },
-                set: function (value) {
-                    this._height = value - this._top;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "center", {
-                get: function () {
-                    return new Point(this.left + this.width / 2, this.top + this.height / 2);
-                },
-                set: function (value) {
-                    this.left = value.x - this.width / 2;
-                    this.top = value.y - this.height / 2;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "height", {
-                get: function () {
-                    return this._height;
-                },
-                set: function (value) {
-                    this._height = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "isEmpty", {
-                get: function () {
-                    return this.area == 0 && this.left == 0 && this.top == 0;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "isHorizontal", {
-                get: function () {
-                    return this.width > this.height;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "isSquare", {
-                get: function () {
-                    return this.width == this.height;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "isVertical", {
-                get: function () {
-                    return this.height > this.width;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "left", {
-                get: function () {
-                    return this._left;
-                },
-                set: function (value) {
-                    this._left = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "location", {
-                get: function () {
-                    return new Point(this.left, this.top);
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "right", {
-                get: function () {
-                    return this._left + this._width;
-                },
-                set: function (value) {
-                    this._width = value - this._left;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "size", {
-                get: function () {
-                    return new Size(this.width, this.height);
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "tag", {
-                get: function () {
-                    return this._tag;
-                },
-                set: function (value) {
-                    this._tag = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "top", {
-                get: function () {
-                    return this._top;
-                },
-                set: function (value) {
-                    this._top = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            Object.defineProperty(Rectangle.prototype, "width", {
-                get: function () {
-                    return this._width;
-                },
-                set: function (value) {
-                    this._width = value;
-                },
-                enumerable: true,
-                configurable: true
-            });
-            return Rectangle;
-        }());
-        latte.Rectangle = Rectangle;
-        var Size = (function () {
-            function Size(width, height) {
-                if (width === void 0) { width = null; }
-                if (height === void 0) { height = null; }
-                this._height = null;
-                this._width = null;
-                if (width !== null) {
-                    this._width = width;
-                }
-                if (height !== null) {
-                    this._height = height;
-                }
-            }
-            Size.empty = function () {
-                return new Size(null, null);
-            };
-            Size.zero = function () {
-                return new Size(0, 0);
-            };
             Size.prototype.contains = function (size) {
                 return this.width >= size.width && this.height >= size.height;
+            };
+            Size.prototype.equals = function (s) {
+                return this.width == s.width && this.height == s.height;
             };
             Size.prototype.inflate = function (width, height) {
                 return new Size(this.width + width, this.height + height);
@@ -1386,7 +1459,7 @@ define(["require", "exports"], function (require, exports) {
                 return new Size(target.width, dh);
             };
             Size.prototype.toString = function () {
-                return sprintf("Size(%s, %s)", this._width, this._height);
+                return sprintf("(%s, %s)", this.width, this.height);
             };
             Object.defineProperty(Size.prototype, "area", {
                 get: function () {
@@ -1397,7 +1470,7 @@ define(["require", "exports"], function (require, exports) {
             });
             Object.defineProperty(Size.prototype, "isEmpty", {
                 get: function () {
-                    return this._height == null && this._width == null;
+                    return this.width === 0 || this.height === 0;
                 },
                 enumerable: true,
                 configurable: true
@@ -1425,101 +1498,270 @@ define(["require", "exports"], function (require, exports) {
             });
             Object.defineProperty(Size.prototype, "height", {
                 get: function () {
-                    return this._height;
+                    return this.getPropertyValue('height', Number, null);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Size.prototype, "width", {
                 get: function () {
-                    return this._width;
+                    return this.getPropertyValue('width', Number, null);
                 },
                 enumerable: true,
                 configurable: true
             });
             return Size;
-        }());
+        }(PropertyTarget));
         latte.Size = Size;
-        var Eventable = (function () {
-            function Eventable() {
-                this.eventHandlers = {};
-            }
-            Eventable.prototype.on = function (eventName, handler) {
-                if (!(eventName in this.eventHandlers)) {
-                    this.eventHandlers[eventName] = [];
-                }
-                this.eventHandlers[eventName].push(handler);
-                return this;
-            };
-            Eventable.prototype.raise = function (eventName) {
-                var _this = this;
-                var params = [];
-                for (var _i = 1; _i < arguments.length; _i++) {
-                    params[_i - 1] = arguments[_i];
-                }
-                if (eventName in this.eventHandlers) {
-                    for (var name_1 in this.eventHandlers)
-                        this.eventHandlers[name_1].forEach(function (f) { return f.call(_this, params); });
-                }
-            };
-            return Eventable;
-        }());
-        latte.Eventable = Eventable;
-        var PropertyTarget = (function (_super) {
-            __extends(PropertyTarget, _super);
-            function PropertyTarget() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.propertyValues = {};
+        var Rectangle = (function (_super) {
+            __extends(Rectangle, _super);
+            function Rectangle(left, top, width, height) {
+                if (left === void 0) { left = 0; }
+                if (top === void 0) { top = 0; }
+                if (width === void 0) { width = 0; }
+                if (height === void 0) { height = 0; }
+                var _this = _super.call(this) || this;
+                _this.setPropertyValue('top', top, Number);
+                _this.setPropertyValue('left', left, Number);
+                _this.setPropertyValue('width', width, Number);
+                _this.setPropertyValue('height', height, Number);
                 return _this;
             }
-            PropertyTarget.prototype.willSet = function (e) {
-                this.raise('willSet' + _camelCase(e.property), e);
+            Object.defineProperty(Rectangle, "zero", {
+                get: function () {
+                    return new Rectangle();
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Rectangle.fromLRTB = function (left, right, top, bottom) {
+                return new Rectangle(left, top, right - left, bottom - top);
             };
-            PropertyTarget.prototype.didSet = function (e) {
-                this.raise('didSet' + _camelCase(e.property), e);
-            };
-            PropertyTarget.prototype.getPropertyValue = function (name, withDefault) {
-                if (withDefault === void 0) { withDefault = undefined; }
-                if (!(name in this.propertyValues)) {
-                    this.propertyValues[name] = withDefault;
-                }
-                return this.propertyValues[name];
-            };
-            PropertyTarget.prototype.getLazyProperty = function (name, creator) {
-                if (!(name in this.propertyValues)) {
-                    this.propertyValues[name] = creator();
-                }
-                return this.getPropertyValue(name, undefined);
-            };
-            PropertyTarget.prototype.hasPropertyValue = function (name) {
-                return name in this.propertyValues;
-            };
-            PropertyTarget.prototype.setPropertyValue = function (name, value, options) {
-                if (options === void 0) { options = {}; }
-                var oldValue = this.getPropertyValue(name);
-                var data = {
-                    property: name,
-                    oldValue: oldValue,
-                    newValue: value
-                };
-                this.willSet(data);
-                var changed = oldValue !== data.newValue;
-                if (changed) {
-                    this.propertyValues[name] = data.newValue;
-                    if (options.silent !== true) {
-                        this.didSet(data);
+            Rectangle.fromObject = function (obj) {
+                'left,top,width,height'.split(',').forEach(function (p) {
+                    if (!(p in obj)) {
+                        throw "Missing " + p + " property";
                     }
-                }
-                return value;
+                });
+                return new Rectangle(obj.left, obj.top, obj.width, obj.height);
             };
-            PropertyTarget.prototype.setPropertyValues = function (values) {
-                for (var i in values) {
-                    this.setPropertyValue(i, values[i]);
-                }
-                return this;
+            Rectangle.fromObjectLRTB = function (obj) {
+                'left,right,top,bottom'.split(',').forEach(function (p) {
+                    if (!(p in obj)) {
+                        throw "Missing " + p + " property";
+                    }
+                });
+                return Rectangle.fromLRTB(obj.left, obj.right, obj.top, obj.bottom);
             };
-            return PropertyTarget;
-        }(Eventable));
-        latte.PropertyTarget = PropertyTarget;
+            Rectangle.fromElement = function (e) {
+                return Rectangle.fromObject(e.getBoundingClientRect());
+            };
+            Rectangle.prototype.absolute = function () {
+                var width = Math.abs(this.width);
+                var height = Math.abs(this.height);
+                var left = this.width < 0 ? this.right : this.left;
+                var top = this.height < 0 ? this.bottom : this.top;
+                return new Rectangle(left, top, width, height);
+            };
+            Rectangle.prototype.ceil = function () {
+                var r = Math.ceil;
+                return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
+            };
+            Rectangle.prototype.centerOn = function (container) {
+                return new Rectangle(container.left + (container.width - this.width) / 2, container.top + (container.height - this.height) / 2, this.width, this.height);
+            };
+            Rectangle.prototype.clone = function () {
+                return new Rectangle(this.left, this.top, this.width, this.height);
+            };
+            Rectangle.prototype.contains = function (x, y) {
+                return this.left <= x && x <= this.right && this.top <= y && y <= this.bottom;
+            };
+            Rectangle.prototype.containsPoint = function (point) {
+                return this.contains(point.x, point.y);
+            };
+            Rectangle.prototype.containsRectangle = function (rectangle) {
+                return this.contains(rectangle.left, rectangle.top) && this.contains(rectangle.right, rectangle.bottom);
+            };
+            Rectangle.prototype.equals = function (r) {
+                if (!r)
+                    return false;
+                return this.left === r.left && this.top === this.top && this.width === r.width && this.height === r.height;
+            };
+            Rectangle.prototype.floor = function () {
+                var r = Math.floor;
+                return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
+            };
+            Rectangle.prototype.inflate = function (horizontal, vertical) {
+                return Rectangle.fromLRTB(this.left - horizontal, this.right + horizontal, this.top - vertical, this.bottom + vertical);
+            };
+            Rectangle.prototype.intersection = function (rectangle) {
+                var a = this;
+                var b = rectangle;
+                var x1 = Math.max(a.left, b.left);
+                var x2 = Math.min(a.right, b.right);
+                var y1 = Math.max(a.top, b.top);
+                var y2 = Math.min(a.bottom, b.bottom);
+                if (x2 >= x1 && y2 >= y1) {
+                    return new Rectangle(x1, y1, x2 - x1, y2 - y1);
+                }
+                return Rectangle.zero;
+            };
+            Rectangle.prototype.intersects = function (rectangle) {
+                var thisX = this.left;
+                var thisY = this.top;
+                var thisW = this.width;
+                var thisH = this.height;
+                var rectX = rectangle.left;
+                var rectY = rectangle.top;
+                var rectW = rectangle.width;
+                var rectH = rectangle.height;
+                return (rectX < thisX + thisW) && (thisX < (rectX + rectW)) && (rectY < thisY + thisH) && (thisY < rectY + rectH);
+            };
+            Rectangle.prototype.ofLocation = function (location) {
+                return new Rectangle(location.x, location.y, this.width, this.height);
+            };
+            Rectangle.prototype.ofSize = function (size) {
+                return new Rectangle(this.left, this.top, size.width, size.height);
+            };
+            Rectangle.prototype.round = function () {
+                var r = Math.round;
+                return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
+            };
+            Rectangle.prototype.scaleToFill = function (size) {
+                return this.ofSize(this.size.scaleToFill(size));
+            };
+            Rectangle.prototype.scaleToFit = function (size) {
+                return this.ofSize(this.size.scaleToFit(size));
+            };
+            Rectangle.prototype.scaleToHeight = function (height) {
+                return new Rectangle(this.left, this.top, height * this.width / this.height, height);
+            };
+            Rectangle.prototype.scaleToWidth = function (width) {
+                return new Rectangle(this.left, this.top, width, width * this.height / this.width);
+            };
+            Rectangle.prototype.toString = function () {
+                return "Rectangle: " + [this.left, this.top, this.width, this.height].join(', ');
+            };
+            Rectangle.prototype.union = function (rectangle) {
+                return Rectangle.fromLRTB(Math.min(this.left, rectangle.left), Math.max(this.right, rectangle.right), Math.min(this.top, rectangle.top), Math.max(this.bottom, rectangle.bottom));
+            };
+            Object.defineProperty(Rectangle.prototype, "area", {
+                get: function () {
+                    return this.size.area;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "aspectRatio", {
+                get: function () {
+                    return this.width / this.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "bottom", {
+                get: function () {
+                    return this.top + this.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "center", {
+                get: function () {
+                    return new Point(this.left + this.width / 2, this.top + this.height / 2);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "height", {
+                get: function () {
+                    return this.getPropertyValue('height', Number, null);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "isZero", {
+                get: function () {
+                    return this.size.isEmpty && this.location.isOrigin;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "isHorizontal", {
+                get: function () {
+                    return this.width > this.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "isSquare", {
+                get: function () {
+                    return this.width == this.height;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "isVertical", {
+                get: function () {
+                    return this.height > this.width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "left", {
+                get: function () {
+                    return this.getPropertyValue('left', Number, null);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "location", {
+                get: function () {
+                    return new Point(this.left, this.top);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "right", {
+                get: function () {
+                    return this.left + this.width;
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "size", {
+                get: function () {
+                    return new Size(this.width, this.height);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "tag", {
+                get: function () {
+                    return this.getPropertyValue('tag', Any, null);
+                },
+                set: function (value) {
+                    this.setPropertyValue('tag', value, Any);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "top", {
+                get: function () {
+                    return this.getPropertyValue('top', Number, null);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Rectangle.prototype, "width", {
+                get: function () {
+                    return this.getPropertyValue('width', Number, null);
+                },
+                enumerable: true,
+                configurable: true
+            });
+            return Rectangle;
+        }(PropertyTarget));
+        latte.Rectangle = Rectangle;
     })(latte = exports.latte || (exports.latte = {}));
 });

@@ -6,6 +6,7 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
     var IconIllustrator = icon_1.icon.IconIllustrator;
     var ImageFit = imageutil_1.imageutil.ImageFit;
     var Size = latte_1.latte.Size;
+    var log = latte_1.latte.log;
     var Color = latte_1.latte.Color;
     exports.run = function () {
         var pal = Icon.legoPalette();
@@ -17,6 +18,7 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
             icon.contrast(parseInt(ws.contrastSlider.value));
             icon.bright(parseInt(ws.brightnessSlider.value));
             icon.stickToPalette(pal);
+            log(icon.colorStatistics(pal));
             illustrator.icon = icon;
         };
         var updateSize = function (size) {

@@ -1,4 +1,53 @@
+
+declare global{
+    interface Number {
+        px: string;
+    }
+
+    interface NumberConstructor {
+        readonly MAX_SAFE_INTEGER: number;
+        readonly MIN_SAFE_INTEGER: number;
+        readonly MAX_VALUE: number;
+        readonly MIN_VALUE: number;
+        isSafeInteger(n: number): boolean;
+    }
+}
+
+
+
+Object.defineProperty((Number as any).prototype, "px", {
+    get: function () {
+        return this + 'px';
+    },
+    enumerable: false,
+    configurable: true
+});
+// alert("implanting");
+
 export namespace latte{
+
+    //region Declarations
+
+    // declare interface NumberConstructor {
+    //     MAX_SAFE_INTEGER: number;
+    //     MIN_SAFE_INTEGER: number;
+    //     MAX_VALUE: number;
+    //     MIN_VALUE: number;
+    // }
+
+    // export declare interface INumber{
+    //     MAX_SAFE_INTEGER: number;
+    //     MIN_SAFE_INTEGER: number;
+    //     MAX_VALUE: number;
+    //     MIN_VALUE: number;
+    //     px: string;
+    //     isSafeInteger(n: number): boolean;
+    // }
+    //
+    // export declare var Number: INumber;
+    //endregion
+
+    //region Global Methods
 
     /**
      * Returns the camel case of the passed string
@@ -7,6 +56,11 @@ export namespace latte{
      * @private
      */
     export function _camelCase(s: string): string{
+
+        let nextUpper = true;
+        let result = "";
+        let skip = false;
+
 
         if(s == null) {
             s = '';
@@ -18,7 +72,30 @@ export namespace latte{
             return s;
         }
 
-        return s.substr(0, 1).toUpperCase() + s.substr(1);
+        for(let i = 0; i < s.length; i++){
+            if(skip) {
+                skip = false;
+                nextUpper = true;
+                continue;
+            }else if(nextUpper) {
+                nextUpper = false;
+                result += s.charAt(i).toUpperCase();
+                continue;
+            }else{
+                result += s.charAt(i);
+            }
+
+            if(i < s.length - 1) {
+                let chr = s.charAt(i + 1);
+
+                if(chr == ' ' || chr == '_') {
+                    skip = true;
+                }
+            }
+
+        }
+
+        return result;
     }
 
     /**
@@ -97,6 +174,8 @@ export namespace latte{
      **/
     export function _zeroPad(n: number): string{
 
+        n = n || 0;
+
         return n <= 9 ? '0' + n.toString() : n.toString();
 
     }
@@ -107,7 +186,7 @@ export namespace latte{
      * @returns {string}
      * @private
      */
-    export function _zeroFill(positions: number = 3,n: number,  chr: string = '0'): string{
+    export function _zeroFill(positions: number = 2,n: number,  chr: string = '0'): string{
         let s = String(n);
         let zeros = positions - s.length; if(zeros < 0) zeros = 0;
         let acc = '';
@@ -132,9 +211,9 @@ export namespace latte{
      * sprintf for only %s strings
      */
     export function sprintf(...any: any[]){
-        var arg = 1, format = arguments[0], cur, next, result = [];
+        let arg = 1, format = arguments[0], cur, next, result = [];
 
-        for(var i = 0; i < format.length; i++){
+        for(let i = 0; i < format.length; i++){
 
             cur = format.substr(i, 1);
             next = i == format.length - 1 ? '' : format.substr(i + 1, 1);
@@ -150,35 +229,434 @@ export namespace latte{
         return result.join('');
     }
 
+    //endregion
+
+    export type EventHandler = (...any: any[]) => any;
+
+    export enum Side{
+        TOP,
+        RIGHT,
+        BOTTOM,
+        LEFT
+    }
+
+    export enum Orientation{
+        VERTICAL,
+        HORIZONTAL
+    }
+
+    /**
+     * Base object who supports events
+     */
+    export class Eventable{
+
+        //region Fields
+        private eventHandlers: {[name: string]: EventHandler[]} = {};
+        //endregion
+
+        //region Methods
+
+        /**
+         * Handles an event
+         * @param {string} eventName
+         * @param {(...any: any[]) => any} handler
+         */
+        on(eventName: string, handler: EventHandler): this{
+
+            if(!(eventName in this.eventHandlers)) {
+                this.eventHandlers[eventName] = [];
+            }
+
+            this.eventHandlers[eventName].push(handler);
+
+            return this;
+        }
+
+        /**
+         * Override this method to catch events on the current class, before the
+         * event chain has been raised.
+         * @param eventName
+         * @param params
+         */
+        onBeforeEvent(eventName: string, params: any[]){
+
+        }
+
+        /**
+         * Override this method to catch events on the current class, once the
+         * event chain has been raised.
+         * @param eventName
+         * @param params
+         */
+        onEvent(eventName: string, params: any[]){
+
+        }
+
+        /**
+         * Raises an event
+         * @param {string} eventName
+         * @param params
+         */
+        raise(eventName: string, ...params: any[]){
+
+            this.onBeforeEvent(eventName, params);
+
+            if(eventName in this.eventHandlers) {
+                for(let name in this.eventHandlers) {
+                    this.eventHandlers[name].forEach( f => f.apply(this, params));
+                }
+            }
+
+            this.onEvent(eventName, params);
+
+        }
+
+        //endregion
+
+    }
+
+    /**
+     * Data passed on the didSet (property value) events
+     */
+    export interface DidSet{
+        property: string;
+        oldValue: any;
+        newValue: any;
+    }
+
+    /**
+     * Data passed on the willSet (property value) events
+     */
+    export interface WillSet extends DidSet{}
+
+    /**
+     * Options that may be applied to the <c>setPropertyValue</c> method
+     */
+    export interface SetPropertyOptions{
+        silent?: boolean;
+    }
+
+    export type PropertyValueType = any;// (...any: any[]) => any | Function;
+
+    export class Any{}// (...any: any[]) => any | Function;
+
+    /**
+     * Gives an object property capabilities
+     */
+    export class PropertyTarget extends Eventable{
+
+        //region Static
+
+        private static staticProperties: PropertyTarget;
+
+        private static getStaticObject(eventObj: any): PropertyTarget{
+            if(!('staticProperties' in eventObj)) {
+                eventObj.staticProperties = new PropertyTarget();
+            }
+            return eventObj.staticProperties;
+        }
+
+        static getStaticPropertyValue(classObj: any, name: string, validator: PropertyValueType, withDefault: any = undefined): any{
+            return PropertyTarget.getStaticObject(classObj).getPropertyValue(name, validator, withDefault);
+        }
+
+        static hasStaticPropertyValue(className: any, name: string): boolean{
+            return PropertyTarget.getStaticObject(className).hasPropertyValue(name);
+        }
+
+        static setStaticPropertyValue<T>(className: any, name: string, validator: PropertyValueType, value: T, options: SetPropertyOptions = {}): T{
+            return PropertyTarget.getStaticObject(className).setPropertyValue(name, value, validator, options);
+        }
+
+        static getStaticLazyProperty<T>(className: any, name: string, validator: PropertyValueType, creator: () => T): T{
+            return PropertyTarget.getStaticObject(className).getLazyProperty(name, validator, creator);
+        }
+
+        //endregion
+
+        //region Private
+        private propertyValues: {[name: string]: any} = {};
+        //endregion
+
+        //region Protected Methods
+
+        /**
+         * Called before changing the value of a property
+         * @param {latte.WillSet} e
+         */
+        protected willSet(e: WillSet){
+            this.raise('willSet' + _camelCase(e.property), e);
+        }
+
+        /**
+         * Called after chaning the value of a property
+         * @param {latte.DidSet} e
+         */
+        protected didSet(e: DidSet){
+            this.raise('didSet' + _camelCase(e.property), e);
+        }
+
+        protected valid<T>(value: T, validator: PropertyValueType): boolean{
+
+            if(validator === null) {
+                // HACK: this should not be possible.
+                return true;
+            }
+
+            if(validator === (Number as any)) {
+                return _isNumber(value);
+
+            }else if(validator === Boolean) {
+                return _isBoolean(value);
+
+            }else if(validator === String) {
+                return _isString(value);
+
+            }else if(validator === Any){
+                return true;
+
+            }else{
+                return value instanceof validator;
+            }
+
+
+            return true;
+        }
+
+        //endregion
+
+        //region Methods
+
+        /**
+         * Deletes any value related to the property as it never was registered.
+         * @param {string} name
+         */
+        protected deleteProperty(name: string){
+            if(name in this.propertyValues) {
+                delete this.propertyValues[name];
+            }
+        }
+
+        /**
+         * Gets the value of a property
+         * @param {string} name
+         * @param withDefault
+         * @returns {any}
+         */
+        protected getPropertyValue(name: string, validator: PropertyValueType, withDefault: any):any{
+            if(!(name in this.propertyValues)) {
+                this.propertyValues[name] = withDefault;
+            }
+            return this.propertyValues[name];
+        }
+
+        /**
+         * Gets a property in a lazy fashion
+         * @param {string} name
+         * @param {() => T} creator
+         * @returns {T}
+         */
+        protected getLazyProperty<T>(name: string, validator: PropertyValueType, creator: () => T): T{
+            if(!(name in this.propertyValues)) {
+                this.propertyValues[name] = creator();
+            }
+            return this.getPropertyValue(name, validator, undefined);
+        }
+
+        /**
+         * Returns a value indicating if there is a value for the specified property
+         * @param {string} name
+         * @returns {boolean}
+         */
+        protected hasPropertyValue(name: string): boolean{
+            return name in this.propertyValues;
+        }
+
+        /**
+         * Sets the value of a property
+         * @param {string} name
+         * @param value
+         */
+        protected setPropertyValue<T>(name: string, value: T, validator: PropertyValueType,
+                                      options: SetPropertyOptions = {}): T{
+
+            let oldValue = this.getPropertyValue(name, validator, undefined);
+            let data = {
+                property: name,
+                oldValue: oldValue,
+                newValue: value
+            };
+
+            // Let people know this will change
+            this.willSet(data);
+
+            // Check if a true change was done
+            let changed = oldValue !== data.newValue;
+
+            if(!this.valid(data.newValue, validator)){
+                throw "Invalid property value";
+            }
+
+            // Only change if different value
+            if(changed) {
+
+                // Actually change the value
+                this.propertyValues[name] = data.newValue;
+
+                // Let people know
+                if(options.silent !== true) {
+                    this.didSet(data);
+                }
+            }
+
+            return value;
+        }
+        protected setPropertyUnsafe<T>(name: string, value: T): T{
+            this.propertyValues[name] = value;
+            return value;
+        }
+
+        /**
+         * Sets the values of more than one property
+         * @param {{[name: string]: any}} values
+         * @returns {this}
+         */
+        protected setPropertyValues(values: {[name: string]: any}): this{
+            for(let i in values){
+                this.setPropertyValue(i, values[i], null);
+            }
+            return this;
+        }
+
+        //endregion
+
+    }
+
+    /**
+     * Inspired in Java's Optional
+     */
+    export class Optional<T> extends PropertyTarget{
+
+        //region Static
+
+        /**
+         * Returns an optional with no value
+         * @returns {latte.Optional<V>}
+         */
+        static empty<V>(): Optional<V>{
+            return new Optional<V>(null);
+        }
+
+        /**
+         * Returns an optional of specified value
+         * @param {V} value
+         * @returns {latte.Optional<V>}
+         */
+        static of<V>(value: V): Optional<V>{
+            return new Optional(value);
+        }
+        //endregion
+
+        //region Fields
+        private readonly value: T;
+        //endregion
+
+        constructor(value: T){
+            super();
+            this.value = value;
+        }
+
+        //region Methods
+
+        /**
+         * Executes the callback if there is no value present
+         * @param {() => void} callback
+         */
+        elseDo(callback: () => void): this{
+            if(!this.isPresent) {
+                callback();
+            }
+            return this;
+        }
+
+        /**
+         * Executes the callback if a value is present
+         * @param {(result: T) => void} callback
+         */
+        ifPresent(callback: (result: T) => void): this{
+            if(this.isPresent) {
+                callback(this.value);
+            }
+            return this;
+        }
+
+        /**
+         * Returns the value (if present), specified value if not.
+         * @param {T} value
+         * @returns {T}
+         */
+        orElse(value: T): T{
+            if(this.isPresent) {
+                return this.value;
+            }else{
+                return value;
+            }
+        }
+
+        /**
+         * Throws the specified object if no value present
+         * @param ex
+         */
+        orThrow(ex: any = "Value Needed"): T{
+            if(!this.isPresent) {
+                throw ex;
+            }
+            return this.value;
+        }
+
+        //endregion
+
+        //region Properties
+
+        /**
+         * Gets a value indicating if there is a value present
+         *
+         * @returns {boolean}
+         */
+        get isPresent(): boolean {
+            return this.value !== null;
+        }
+
+        //endregion
+
+    }
+
     /**
      * Represents a color
      **/
-    export class Color{
+    export class Color extends PropertyTarget{
 
         //region Static
+
+        /**
+         * Returns a combination of the specified colors
+         * @param {latte.Color} colors
+         * @returns {latte.Color}
+         */
+        static combine(...colors: Color[]): Color{
+            let avg = (nums: number[]): number => Math.round(nums.reduce((acc, cur) => cur + acc) / nums.length);
+            return new Color(
+                avg(colors.map(c => c.r)),
+                avg(colors.map(c => c.g)),
+                avg(colors.map(c => c.b)),
+            );
+        }
+
         /**
          * Creates a color from the hexadecimal value.
          * It may contain the <c>#</c> symbol at the beginning of the string.
          **/
         static fromHex(hexColor: string): Color{
-
-            if(_isString(hexColor)) {
-                if(hexColor.toLowerCase() == 'white') {
-                    hexColor = '#FFF';
-                }
-
-                if(hexColor.toLowerCase() == 'black') {
-                    hexColor = '#000';
-                }
-
-                if(hexColor.toLowerCase() == 'gray') {
-                    hexColor = '#777';
-                }
-
-                if(hexColor.length == 0) {
-                    hexColor = '#000';
-                }
-            }
 
             // Check is string
             if(!_isString(hexColor) || hexColor.length == 0) throw "Invalid Hex: " + hexColor;
@@ -187,7 +665,7 @@ export namespace latte{
             if(hexColor.charAt(0) == '#') hexColor = hexColor.substr(1);
 
             // Check length
-            if(!(hexColor.length == 3 || hexColor.length == 6 || hexColor.length == 9)) throw "Invalid Hex: " + hexColor;
+            if(!(hexColor.length == 3 || hexColor.length == 6 || hexColor.length == 8)) throw "Invalid Hex: " + hexColor;
 
             let c = new latte.Color();
 
@@ -203,12 +681,26 @@ export namespace latte{
                 c.g = (toDecimal(hexColor.charAt(2) + hexColor.charAt(3)));
                 c.b = (toDecimal(hexColor.charAt(4) + hexColor.charAt(5)));
 
-                if(hexColor.length == 9)
+                if(hexColor.length == 8)
                     c.a = (toDecimal(hexColor.charAt(6) + hexColor.charAt(7)));
             }
 
             return c;
 
+        }
+
+        /**
+         * Gets the color from the specifed 32 byte based integer
+         * @param {number} n
+         * @returns {latte.Color}
+         */
+        static fromInt32(n: number): Color{
+            return new Color(
+                n & 0xff,
+                (n & 0xff00) >>> 8,
+                (n & 0xff0000) >>> 16,
+                (n & 0xFF000000) >>> 24
+            );
         }
 
         /**
@@ -221,9 +713,9 @@ export namespace latte{
          */
         static cmykToRgb(c: number, m: number, y: number, k: number): number[]{
             return [
-                255 * (1 - c) * (1 - k),
-                255 * (1 - m) * (1 - k),
-                255 * (1 - y) * (1 - k)
+                Math.round(255 * (1 - c) * (1 - k)),
+                Math.round(255 * (1 - m) * (1 - k)),
+                Math.round(255 * (1 - y) * (1 - k))
             ]
         }
 
@@ -231,27 +723,20 @@ export namespace latte{
          * HSV to RGB color conversion
          *
          * H runs from 0 to 360 degrees
-         * S and V run from 0 to 100
+         * S and V run from 0 to 1
          *
          * Ported from the excellent java algorithm by Eugene Vishnevsky at:
          * http://www.cs.rit.edu/~ncs/color/t_convert.html
          */
-        static hsvToRgb(h: number, s: number, v: number) {
-            var r, g, b;
-            var i;
-            var f, p, q, t;
+        static hsvToRgb(h: number, s: number, v: number): number[] {
+            let r, g, b;
+            let i;
+            let f, p, q, t;
 
             // Make sure our arguments stay in-range
             h = Math.max(0, Math.min(360, h));
             s = Math.max(0, Math.min(100, s));
             v = Math.max(0, Math.min(100, v));
-
-            // We accept saturation and value arguments from 0 to 100 because that's
-            // how Photoshop represents those values. Internally, however, the
-            // saturation and value are calculated from a range of 0 to 1. We make
-            // That conversion here.
-            s /= 100;
-            v /= 100;
 
             if(s == 0) {
                 // Achromatic (grey)
@@ -272,31 +757,26 @@ export namespace latte{
                     g = t;
                     b = p;
                     break;
-
                 case 1:
                     r = q;
                     g = v;
                     b = p;
                     break;
-
                 case 2:
                     r = p;
                     g = v;
                     b = t;
                     break;
-
                 case 3:
                     r = p;
                     g = q;
                     b = v;
                     break;
-
                 case 4:
                     r = t;
                     g = p;
                     b = v;
                     break;
-
                 default: // case 5:
                     r = v;
                     g = p;
@@ -335,15 +815,15 @@ export namespace latte{
          * @returns {number[]}
          */
         static rgbToHsv(red: number, green: number, blue: number): number[]{
-            var rr, gg, bb;
-            var r = red / 255;
-            var g = green / 255;
-            var b = blue / 255;
-            var h = 0;
-            var s = 0;
-            var v = Math.max(r, g, b);
-            var diff = v - Math.min(r, g, b);
-            var diffc = (c: number) => { return (v - c) / 6 / diff + 1 / 2 }
+            let rr, gg, bb;
+            let r = red / 255;
+            let g = green / 255;
+            let b = blue / 255;
+            let h = 0;
+            let s = 0;
+            let v = Math.max(r, g, b);
+            let diff = v - Math.min(r, g, b);
+            let diffc = (c: number) => { return (v - c) / 6 / diff + 1 / 2 };
 
             if(diff == 0) {
                 h = s = 0;
@@ -370,107 +850,72 @@ export namespace latte{
 
             return [
                 Math.round(h * 360),
-                Math.round(s * 100),
-                Math.round(v * 100)
+                Math.round(s),
+                Math.round(v)
             ];
         }
 
         /**
-         * Field for black property.
-         */
-        private static _black:Color;
-
-        /**
          * Gets the black color
          */
-        static get black():Color {
-            if (!this._black) {
-                this._black = new Color(0,0,0);
-            }
-            return this._black;
+        static get black(): Color {
+            return PropertyTarget.getStaticLazyProperty(Color, 'black', Color, () => {
+                return new Color(0,0,0);
+            });
         }
-
-        /**
-         * Field for white property.
-         */
-        private static _white:Color;
 
         /**
          * Gets the white color
          */
-        static get white():Color {
-            if (!this._white) {
-                this._white = new Color(255, 255, 255);
-            }
-            return this._white;
+        static get white(): Color {
+            return PropertyTarget.getStaticLazyProperty(Color, 'white', Color, () => {
+                return new Color(255, 255, 255);
+            });
         }
-
-        /**
-         * Field for red property.
-         */
-        private static _red:Color;
 
         /**
          * Gets the red color
          */
-        static get red():Color {
-            if (!this._red) {
-                this._red = new Color(255, 0, 0);
-            }
-            return this._red;
+        static get red(): Color {
+            return PropertyTarget.getStaticLazyProperty(Color, 'red', Color,() => {
+                return new Color(255, 0, 0);
+            });
         }
-
-        /**
-         * Field for green property.
-         */
-        private static _green:Color;
 
         /**
          * Gets the green color
          */
-        static get green():Color {
-            if (!this._green) {
-                this._green = new Color(0, 128, 0);
-            }
-            return this._green;
+        static get green(): Color {
+            return PropertyTarget.getStaticLazyProperty(Color, 'green', Color,() => {
+                return new Color(0, 128, 0);
+            });
         }
-
-        /**
-         * Field for blue property.
-         */
-        private static _blue:Color;
 
         /**
          * Gets the blue color
          */
-        static get blue():Color {
-            if (!this._blue) {
-                this._blue = new Color(0, 0, 255);
-            }
-            return this._blue;
+        static get blue(): Color {
+            return PropertyTarget.getStaticLazyProperty(Color, 'blue', Color, () => {
+                return new Color(0, 0, 255);
+            });
         }
-
-        /**
-         * Field for transparent property.
-         */
-        private static _transparent:Color;
 
         /**
          * Gets the transparent color
          */
-        static get transparent():Color {
-            if (!this._transparent) {
-                this._transparent = new Color(0, 0, 0, 0);
-            }
-            return this._transparent;
+        static get transparent(): Color {
+            return PropertyTarget.getStaticLazyProperty(Color, 'transparent', Color, () => {
+                return new Color(0,0,0,0);
+            });
         }
 
         //endregion
+
         /**
          * Creates the color from the specified RGB and Aplha components.
          **/
         constructor(r: number = 0, g: number = 0, b: number = 0, a: number = 255){
-
+            super();
             this.r = r;
             this.g = g;
             this.b = b;
@@ -478,6 +923,34 @@ export namespace latte{
         }
 
         //region Methods
+
+        /**
+         * Returns a value indicating if the color is equals to the one specified by the parameter
+         * @param {latte.Color} c
+         * @returns {boolean}
+         */
+        equals(c: Color): boolean{
+            return c.a == this.a && c.r === this.r && c.g === this.g && c.b === this.b;
+        }
+
+        /**
+         * Returns a copy of the color with the specified alpha between 0 and 255.
+         *
+         * @param alpha
+         */
+        fade(alpha: number): Color{
+            return new Color(this.r, this.g, this.b, alpha);
+        }
+
+        /**
+         * Returns a copy of the color with the specified alpha between 0 and 1.
+         *
+         * @param alphaFloat
+         */
+        fadeFloat(alphaFloat: number): Color{
+            return new Color(this.r, this.g, this.b, alphaFloat * 255);
+        }
+
         /**
          * Returns the color as a hex string
          **/
@@ -493,8 +966,23 @@ export namespace latte{
 
         }
 
+        /**
+         * Returns the color as an int32 representation
+         * @returns {number}
+         */
+        toInt32(): number{
+            return (this.a << 24)	|	// alpha
+                (this.b  << 16)	|	// blue
+                (this.g  <<  8)	|	// green
+                this.r;			    // red
+        }
+
+        /**
+         * Returns the color in the format: rgba(0, 0, 0, 255)
+         * @returns {string}
+         */
         toRgbString(): string{
-            return "rgba(" + this.r + ", " + this.g + ", " + this.b + ")";
+            return sprintf('rgba(%s, %s, %s, %s)', this.r, this.g, this.b, this.a);
         }
 
         /**
@@ -506,7 +994,7 @@ export namespace latte{
                 return 'transparent';
 
             }else if(this.a != 255){
-                return "rgba(" + this.r + ", " + this.g + ", " + this.b + ", " + this.a + ")";
+                return this.toRgbString();
 
             }else{
                 return this.toHexString();
@@ -517,46 +1005,37 @@ export namespace latte{
         //endregion
 
         //region Properties
-        /**
-         *
-         **/
-        private _a: number = 255;
 
         /**
-         * Gets r sets the Alpha component of color, from 0 to 255
-         * @returns {number}
+         * Gets or sets the alpha component (0 to 255)
          */
-        get a(): number{
-            return this._a;
+        get a(): number {
+            return this.getPropertyValue('a', Number,255);
         }
 
         /**
-         * Gets or sets the Aplha component of color, from 0 to 255.
-         **/
-        set a(value: number){
-            this._a = value;
-        }
-
-        /**
+         * Gets or sets the alpha component (0 to 255)
          *
-         **/
-        private _b: number;
-
-        /**
-         * Gets or sets the Blue component of color, from 0 to 255.
-         **/
-        get b(): number{
-
-            return this._b;
-
+         * @param {number} value
+         */
+        set a(value: number) {
+            this.setPropertyValue('a', value, Number);
         }
 
         /**
-         * Gets or sets the Blue component of color, from 0 to 255.
-         **/
-        set b(value: number){
-            if(value < 0 || value > 255) throw "Invalid Blue";
-            this._b = value;
+         * Gets or sets the blue component (0 to 255)
+         */
+        get b(): number {
+            return this.getPropertyValue('b', Number, 0);
+        }
+
+        /**
+         * Gets or sets the blue component (0 to 255)
+         *
+         * @param {number} value
+         */
+        set b(value: number) {
+            this.setPropertyValue('b', value, Number);
         }
 
         /**
@@ -569,34 +1048,19 @@ export namespace latte{
         }
 
         /**
-         * Gets or sets the Cyan component of the CMKYK namespace
-         *
-         * @returns {number}
+         * Gets or sets the green component of the color (0 to 255)
          */
-        set c(value: number){
-            this.r = 255 * (1 - value) * (1 - this.k);
+        get g(): number {
+            return this.getPropertyValue('g', Number, 0);
         }
 
         /**
+         * Gets or sets the green component of the color (0 to 255)
          *
-         **/
-        private _g: number;
-
-        /**
-         * Gets or sets the Green component of color, from 0 to 255.
-         **/
-        get g(): number{
-
-            return this._g;
-
-        }
-
-        /**
-         * Gets or sets the Green component of color, from 0 to 255.
-         **/
-        set g(value: number){
-            if(value < 0 || value > 255) throw "Invalid Green";
-            this._g = value;
+         * @param {number} value
+         */
+        set g(value: number) {
+            this.setPropertyValue('g', value, Number);
         }
 
         /**
@@ -624,25 +1088,6 @@ export namespace latte{
          */
         get y():number {
             return (1 - (this.b / 255) - this.k) / (1 - this.k);
-        }
-
-
-        /**
-         * Returns a copy of the color with the specified alpha between 0 and 255.
-         *
-         * @param alpha
-         */
-        fade(alpha: number): Color{
-            return new Color(this.r, this.g, this.b, alpha);
-        }
-
-        /**
-         * Returns a copy of the color with the specified alpha between 0 and 1.
-         *
-         * @param alpha
-         */
-        fadeFloat(alpha: number): Color{
-            return new Color(this.r, this.g, this.b, alpha * 255);
         }
 
         /**
@@ -685,27 +1130,19 @@ export namespace latte{
         }
 
         /**
-         *
-         **/
-        private _r: number;
-
-        /**
-         * Gets or sets the Red component of color, from 0 to 255.
-         **/
-        get r(): number{
-
-            return this._r;
-
+         * Gets or sets the red component of the color (0 to 255)
+         */
+        get r(): number {
+            return this.getPropertyValue('r', Number, 0);
         }
 
         /**
-         * Gets or sets the Red component of color, from 0 to 255.
-         **/
-        set r(value: number){
-            if(value < 0 || value > 255) throw "Invalid Red";
-
-            this._r = value;
-
+         * Gets or sets the red component of the color (0 to 255)
+         *
+         * @param {number} value
+         */
+        set r(value: number) {
+            this.setPropertyValue('r', value, Number);
         }
         //endregion
     }
@@ -713,16 +1150,41 @@ export namespace latte{
     /**
      * Represents a time interval.
      **/
-    export class TimeSpan{
+    export class TimeSpan extends PropertyTarget{
 
         millis: number = 0;
+
+        /**
+         * Gets the maximum representable TimeSpan
+         */
+        static get MAX_VALUE(): TimeSpan {
+            return PropertyTarget.getStaticLazyProperty(TimeSpan, 'MAX_VALUE', TimeSpan, () => {
+                return TimeSpan.fromMilliseconds(Number.MAX_SAFE_INTEGER);
+            });
+        }
+
+        /**
+         * Gets the minimum representable TimeSpan
+         */
+        static get MIN_VALUE(): TimeSpan {
+            return PropertyTarget.getStaticLazyProperty(TimeSpan, 'MIN_VALUE', TimeSpan, () => {
+                return TimeSpan.fromMilliseconds(Number.MIN_SAFE_INTEGER * -1).negate();
+            });
+        }
 
         /**
          * Creates a TimeSpan from the specified amount of days
          **/
         static fromDays(days: number): TimeSpan{
 
-            return new TimeSpan(days);
+            let negate = days < 0;
+            let result = new TimeSpan(Math.abs(days));
+
+            if(negate) {
+                result.negate();
+            }
+
+            return result;
 
         }
 
@@ -731,7 +1193,14 @@ export namespace latte{
          **/
         static fromHours(hours: number): TimeSpan{
 
-            return new TimeSpan(0, hours);
+            let negate = hours < 0;
+            let result = new TimeSpan(0, Math.abs(hours));
+
+            if(negate) {
+                result.negate();
+            }
+
+            return result;
 
         }
 
@@ -740,9 +1209,12 @@ export namespace latte{
          **/
         static fromMilliseconds(milliseconds: number): TimeSpan{
 
-            var t = new TimeSpan();
+            let negate = milliseconds < 0;
+            let t = new TimeSpan(0,0,0,0, Math.abs(milliseconds));
 
-            t.millis = milliseconds;
+            if(negate) {
+                t.negate();
+            }
 
             return t;
 
@@ -753,7 +1225,14 @@ export namespace latte{
          **/
         static fromMinutes(minutes: number): TimeSpan{
 
-            return new TimeSpan(0, 0, minutes);
+            let negate = minutes < 0;
+            let result = new TimeSpan(0,0, Math.abs(minutes));
+
+            if(negate) {
+                result.negate();
+            }
+
+            return result;
 
         }
 
@@ -762,8 +1241,14 @@ export namespace latte{
          **/
         static fromSeconds(seconds: number): TimeSpan{
 
-            return new TimeSpan(0, 0, 0, seconds);
+            let negate = seconds < 0;
+            let result = new TimeSpan(0, 0, 0, Math.abs(seconds));
 
+            if(negate) {
+                result.negate();
+            }
+
+            return result
         }
 
         /**
@@ -772,13 +1257,54 @@ export namespace latte{
          **/
         static fromString(timeString: string): TimeSpan{
 
+            let parts = timeString.split(':');
 
-            var parts = timeString.split(':');
-            var hours = parts.length > 0 && _isNumeric(parts[0]) ? parseInt(parts[0], 10) : 0;
-            var minutes = parts.length > 1 && _isNumeric(parts[1]) ? parseInt(parts[1], 10) : 0;
-            var seconds = parts.length > 2 && _isNumeric(parts[2]) ? parseInt(parts[2], 10) : 0;
+            if(parts.length !== 3) {
+                throw "Wrong format: [D] hh:mm:ss[.millis]"
+            }
 
-            return new TimeSpan(0, hours, minutes, seconds);
+            let negate = timeString.trim().indexOf('-') === 0;
+
+
+            let first = parts[0];
+            let middle = parts[1];
+            let last = parts[2];
+
+            let days = 0;
+            let hours = 0;
+            let minutes = parseInt(middle, 10);
+            let seconds = 0;
+            let milliseconds = 0;
+
+            if(first.indexOf(' ') >= 0) {
+                let firstParts = first.split(' ');
+
+                if(firstParts.length != 2 ) throw "Invalid format of first part: Days + space + hours";
+
+                days = parseInt(firstParts[0], 10);
+                hours = parseInt(firstParts[1], 10)
+            }else{
+
+                hours = parseInt(first, 10);
+            }
+
+            if(last.indexOf('.') >= 0) {
+                let lastParts = last.split('.');
+                if(lastParts.length != 2 ) throw "Invalid format of last part: Seconds + dot + milliseconds";
+                seconds = parseInt(lastParts[0], 10);
+                milliseconds= parseInt(lastParts[1], 10) * 100;
+
+            }else{
+                seconds = parseInt(last, 10);
+            }
+
+            let result = new TimeSpan(days, hours, minutes, seconds, milliseconds);
+
+            if(negate) {
+                result.negate();
+            }
+
+            return result;
 
         }
 
@@ -795,7 +1321,17 @@ export namespace latte{
          **/
         constructor(days: number = 0, hours: number = 0, minutes: number = 0, seconds: number = 0, milliseconds: number = 0){
 
+            super();
+
+            if(days < 0 || hours < 0 || minutes < 0 || seconds < 0 || milliseconds < 0) {
+                throw "Parameters on constructor can't be negative";
+            }
+
             this.millis = (days * 86400 + hours * 3600 + minutes * 60 + seconds) * 1000 + milliseconds;
+
+            if(!Number.isSafeInteger(this.millis)) {
+                throw "Total milliseconds must be a safe integer";
+            }
 
         }
 
@@ -856,23 +1392,7 @@ export namespace latte{
          * Returns the result of comparing this timespan against the provided timespan
          **/
         compareTo(timespan: TimeSpan): number{
-
-
-            if(this.millis  > timespan.millis) return 1;
-            if(this.millis  == timespan.millis) return 0;
-            if(this.millis  < timespan.millis) return -1;
-
-            throw "?";
-
-        }
-
-        /**
-         * Returns a timespan representing the actual duration of the timespan
-         **/
-        duration(): TimeSpan{
-
-            return new TimeSpan(Math.abs(this.millis));
-
+            return this.millis - timespan.millis;
         }
 
         /**
@@ -885,10 +1405,9 @@ export namespace latte{
         /**
          * Negates the timespan duration
          **/
-        negate(){
-
+        negate(): this{
             this.millis *= -1;
-
+            return this;
         }
 
         /**
@@ -904,11 +1423,11 @@ export namespace latte{
         toString(includeMilliseconds: boolean = false): string{
 
             return  (this.millis < 0 ? '-' : '') +
-                (this.days ? this.days + ' ' : '') +
-                this._zeroPad(this.hours) + ":" +
-                this._zeroPad(this.minutes) +
-                (this.seconds ? ':' + this._zeroPad(this.seconds) : '') +
-                (includeMilliseconds ? '.' + Math.abs(this.milliseconds) : '');
+                (this.days ? Math.abs(this.days) + ' ' : '') +
+                this._zeroPad(Math.abs(this.hours)) + ":" +
+                this._zeroPad(Math.abs(this.minutes)) + ':' +
+                this._zeroPad(Math.abs(this.seconds)) +
+                (includeMilliseconds ? '.' + _zeroFill(3, Math.abs(this.milliseconds)) : '');
 
         }
 
@@ -924,9 +1443,7 @@ export namespace latte{
          * Gets the days component of the time interval represented by this object
          **/
         get days(): number{
-
             return this._rounder(this.millis / 86400000 );
-
         }
 
         /**
@@ -1006,9 +1523,7 @@ export namespace latte{
          * Gets the value of this timespan expressed in whole and fractional minutes
          **/
         get totalMinutes(): number{
-
             return this.millis / (60 * 1000);
-
         }
 
         /**
@@ -1024,9 +1539,28 @@ export namespace latte{
     /**
      * Represents a specific date and time
      **/
-    export class DateTime{
+    export class DateTime extends PropertyTarget{
 
         //region Static
+
+        /**
+         * Gets the maximum representable date
+         */
+        static get MAX_VALUE(): DateTime {
+            return PropertyTarget.getStaticLazyProperty(DateTime, 'MAX_VALUE', DateTime,() => {
+                return DateTime.fromMilliseconds(Number.MAX_SAFE_INTEGER);
+            });
+        }
+
+        /**
+         * Gets the minimum representable date
+         */
+        static get MIN_VALUE(): DateTime {
+            return PropertyTarget.getStaticLazyProperty(DateTime, 'MIN_VALUE', DateTime, () => {
+                return new DateTime(1, 1, 1);
+            });
+        }
+
 
         /**
          * Amount of days in months of a non-leap year
@@ -1042,7 +1576,6 @@ export namespace latte{
          * Returns the absolute number of days on the specified day-month-year
          **/
         static absoluteDays(year: number, month: number, day: number): number{
-
 
             let div = function(a: number, b: number) { return Math.floor(a / b); };
             let arr = DateTime.isLeapYear(year) ?
@@ -1092,28 +1625,32 @@ export namespace latte{
         static fromString(dateTimeString: string): DateTime{
 
             if(dateTimeString.length === 0)
-                return new DateTime();
+                throw "Invalid date format";
 
             let year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
             let parts = dateTimeString.split(' ');
             let dateParts = parts.length > 0 ? parts[0].split('-') : [];
-            let timeParts = parts.length > 1 ? parts[1].split(':') : [];
+            let timeOfDay = parts.length > 1 ? TimeSpan.fromString(parts[1]) : new TimeSpan();
 
             if(dateParts.length === 3){
                 year = parseInt(dateParts[0], 10);
                 month = parseInt(dateParts[1], 10);
                 day = parseInt(dateParts[2], 10);
+
+                if(isNaN(year) || isNaN(month) || isNaN(day)){
+                    throw "Date has invalid numbers";
+                }
+
+            }else{
+                throw "Invalid date format";
             }
 
-            if(timeParts.length === 3){
-                hour = parseInt(timeParts[0], 10);
-                minute = parseInt(timeParts[1], 10);
-                second = parseInt(timeParts[2], 10);
-            }
+            hour = timeOfDay.hours;
+            minute = timeOfDay.minutes;
+            second = timeOfDay.seconds;
 
-            if(year <= 0) year = 1;
-            if(month <= 0) month = 1;
-            if(day <= 0) day = 1;
+            if(year <= 0 || month <= 0 || day < 0)
+                throw "Date components can't be lower than one.";
 
             return new DateTime(year, month, day, hour, minute, second);
 
@@ -1136,8 +1673,7 @@ export namespace latte{
          * Gets a DateTime representing the current millisecond
          **/
         static get now(): DateTime{
-
-            let d = new Date();
+            let d = new Date(); // Native Js Object
             return new DateTime(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
 
         }
@@ -1188,6 +1724,12 @@ export namespace latte{
          **/
         constructor(year: number = 1, month: number = 1, day: number = 1, hour: number = 0, minute: number = null, second: number = null, millisecond: number = null){
 
+            super();
+
+            if(year <= 0 || month <= 0 || day <= 0) {
+                throw "No argument can be <= 0";
+            }
+
             // Calculate days
             let days = DateTime.absoluteDays(year, month, day);
 
@@ -1202,7 +1744,7 @@ export namespace latte{
          * Returns the specified element of date.
          Possible values for <c>what</c> are: <c>year</c> | <c>month</c> | <c>dayyear</c> | <c>day</c>
          **/
-        private fromTimeSpan(what: string): number{
+        private fromTimeSpan(what: 'year' | 'dayyear' | 'month' |'day'): number{
 
 
             let div = function(a: number, b: number){ return Math.floor(a/b); };
@@ -1342,7 +1884,7 @@ export namespace latte{
          **/
         addSeconds(seconds: number): DateTime{
 
-            return new DateTime(this._span.millis + seconds * 1000);
+            return  DateTime.fromMilliseconds(this._span.millis + seconds * 1000);
 
         }
 
@@ -1387,7 +1929,6 @@ export namespace latte{
          **/
         subtractDate(datetime: DateTime): TimeSpan{
             return TimeSpan.fromMilliseconds(this._span.millis - datetime._span.millis);
-
         }
 
         /**
@@ -1396,6 +1937,14 @@ export namespace latte{
         subtractTime(timespan: TimeSpan): DateTime{
             return DateTime.fromMilliseconds(this._span.millis - timespan.millis);
 
+        }
+
+        /**
+         * Gets the Date as an absolute measure of milliseconds
+         * @returns {number}
+         */
+        toMilliseconds(): number{
+            return this._span.totalMilliseconds;
         }
 
         /**
@@ -1436,9 +1985,7 @@ export namespace latte{
          * Gets the day of this datetime
          **/
         get day(): number{
-
             return this.fromTimeSpan("day");
-
         }
 
         /**
@@ -1457,15 +2004,6 @@ export namespace latte{
 
             return this.fromTimeSpan("dayyear");
 
-        }
-
-        /**
-         * Gets the comparer value of the date
-         *
-         * @returns {number}
-         */
-        get comparer():number {
-            return this._span.totalMilliseconds;
         }
 
         /**
@@ -1665,11 +2203,12 @@ export namespace latte{
     }
 
     /**
-     *
+     * Represents a inmmutable point
      */
-    export class Point {
+    export class Point extends PropertyTarget{
 
         //region Static
+
         /**
          * Gets the distance between two points
          * @param a
@@ -1680,40 +2219,29 @@ export namespace latte{
         }
 
         /**
-         * Returns an empty point
-         * @returns {latte.Point}
+         * Gets an empty point
          */
-        static empty(): Point{
-            return new Point(null, null);
+        static get origin(): Point {
+            return PropertyTarget.getStaticLazyProperty(Point, 'origin', Point, () => {
+                return new Point(0, 0);
+            });
         }
 
-        /**
-         * Returns a point situated on the origin
-         * @returns {latte.Point}
-         */
-        static origin(): Point{
-            return new Point(0, 0);
-        }
 
         //endregion
-        //region Fields
-        //endregion
+
         /**
          * Creates a new point, optionally
          */
         constructor(x: number = null, y: number = null) {
-            if(x !== null) {
-                this._x = x;
-            }
+            super();
 
-            if(y !== null) {
-                this._y = y;
-            }
+            this.setPropertyValue('x', x, Number);
+            this.setPropertyValue('y', y, Number);
         }
 
-        //region Private Methods
-        //endregion
         //region Methods
+
         /**
          * Gets the distance to the specified point
          * @param {latte.Point} p
@@ -1744,602 +2272,77 @@ export namespace latte{
         }
 
         /**
+         * Returns a Point with rounded components
+         * @returns {latte.Point}
+         */
+        round(): Point{
+            return new Point(Math.round(this.x), Math.round(this.y));
+        }
+
+        /**
          * Gets string representation of the point
          * @returns {string}
          */
         toString(): string{
-            return sprintf("Point(%s, %s)", this._x, this._y);
+            return sprintf("(%s, %s)", this.x, this.y);
         }
 
         //endregion
-        //region Events
-        //endregion
+
         //region Properties
+
         /**
-         * Gets a value indicating if the point is empty (No value has been set)
+         * Gets a value indicating if the Point is the origin
          *
          * @returns {boolean}
          */
-        public get isEmpty():boolean {
-            return this._x == null || this._y == null;
+        get isOrigin(): boolean {
+            return this.x === 0 && this.y === 0;
         }
 
 
         /**
-         * Property field
-         */
-        private _x: number = null;
-
-        /**
-         * Gets or sets the x coordinate
-         *
-         * @returns {number}
+         * Gets the x component of the point
          */
         get x(): number {
-            return this._x;
+            return this.getPropertyValue('x', Number, null);
         }
 
         /**
-         * Gets or sets the x coordinate
-         *
-         * @param {number} value
-         */
-        set x(value: number) {
-            this._x = value;
-        }
-
-        /**
-         * Property field
-         */
-        private _y: number = null;
-
-        /**
-         * Gets or sets the y coordinate
-         *
-         * @returns {number}
+         * Gets the y component of the point
          */
         get y(): number {
-            return this._y;
-        }
-
-        /**
-         * Gets or sets the y coordinate
-         *
-         * @param {number} value
-         */
-        set y(value: number) {
-            this._y = value;
+            return this.getPropertyValue('y', Number, null);
         }
 
         //endregion
     }
 
     /**
-     * Reprsents a Rectangle
-     **/
-    export class Rectangle{
-
-        /**
-         * Returns a new empty rectangle
-         * @returns {latte.Rectangle}
-         */
-        static empty(): Rectangle{
-            return new Rectangle();
-        }
-
-        /**
-         * Creates a rectangle with the specified left, right, top and bottom.
-         **/
-        static fromLRTB(left: number, right: number, top: number, bottom: number): Rectangle{
-
-            let r = new Rectangle(left, top);
-            r.right = right;
-            r.bottom = bottom;
-            return r;
-
-        }
-
-        /**
-         * Creates a rectangle from the specified object (top, left, width, height)
-         * @param obj
-         */
-        static fromObject(obj: any): Rectangle{
-            return new Rectangle(obj.left, obj.top, obj.width, obj.height);
-        }
-
-        /**
-         * Creates a rectangle from the specified object (top, left, width, height)
-         * @param obj
-         */
-        static fromObjectLFTB(obj: any): Rectangle{
-            return Rectangle.fromLRTB(obj.left, obj.right, obj.top, obj.bottom);
-        }
-
-        /**
-         * Creates a rectangle of the specified rectangle
-         * @param {HTMLElement} e
-         * @returns {latte.Rectangle}
-         */
-        static fromElement(e: HTMLElement): Rectangle{
-            return Rectangle.fromObject(e.getBoundingClientRect());
-        }
-
-        /**
-         * Height of rectangle
-         **/
-        private _height: number;
-
-        /**
-         * Left of rectangle
-         **/
-        private _left: number;
-
-        /**
-         * Top of rectangle
-         **/
-        private _top: number;
-
-        /**
-         * Width of rectangle
-         **/
-        private _width: number;
-
-        /**
-         *
-         */
-        private _tag: any;
-
-        /**
-         * Creates a rectangle with the specified left, top, width and height.
-         **/
-        constructor(left: number = 0, top: number = 0, width: number = 0, height: number = 0){
-
-            this.top = top;
-            this.left = left;
-            this.width = width;
-            this.height = height;
-
-        }
-
-        /**
-         * Returns a rectangle of positive width and height, by changing its coordinates and preserving width and height
-         */
-        absolute(): Rectangle{
-            let width = Math.abs(this.width);
-            let height = Math.abs(this.height);
-            let left = this.width < 0 ? this.right : this.left;
-            let top = this.height < 0 ? this.bottom : this.top;
-            return new Rectangle(left, top, width, height);
-        }
-
-        /**
-         * Returns a rectangle with ceiling coordinates
-         * @returns {latte.Rectangle}
-         */
-        ceil(): Rectangle{
-            let r = Math.ceil;
-            return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
-        }
-
-        /**
-         * Returns the result of centering this into the specified container
-         **/
-        centerOn(container: Rectangle): Rectangle{
-
-            let c = new Rectangle( container.left + (container.width - this.width) / 2,
-                container.top + (container.height - this.height) / 2, this.width, this.height );
-            return c;
-
-        }
-
-        /**
-         *
-         * @returns {latte.Rectangle}
-         */
-        clone(): Rectangle{
-            return new Rectangle(this.left, this.top, this.width, this.height);
-        }
-
-        /**
-         * Gets a value indicating if the specified point is contained
-         **/
-        contains(x: number, y: number): boolean{
-
-            return this.left <= x && x <= this.right && this.top <= y && y <= this.bottom;
-
-        }
-
-        /**
-         * Gets a value indicating if the rectangle is contained inside this rectangle
-         **/
-        containsRectangle(rectangle: Rectangle): boolean{
-
-            return this.contains( rectangle.left, rectangle.top) && this.contains( rectangle.right, rectangle.bottom);
-
-        }
-
-        /**
-         * Compares this rectangle with the specified rectangle and returns the result
-         * @param r
-         * @returns {boolean}
-         */
-        equals(r: Rectangle): boolean{
-            if(!r) return false;
-            return this.left == r.left && this.top == this.top && this.width == r.width && this.height == r.height;
-        }
-
-        /**
-         * Returns a rectangle with floor coordinates
-         * @returns {latte.Rectangle}
-         */
-        floor(): Rectangle{
-            let r = Math.floor;
-            return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
-        }
-
-        /**
-         * Returns the result of inflating the rectangle vertically and horizontally on each edge.
-         **/
-        inflate(horizontal: number, vertical: number): Rectangle{
-            return Rectangle.fromLRTB(this.left - horizontal, this.right + horizontal,
-                this.top - vertical, this.bottom + vertical);
-
-        }
-
-        /**
-         * Returns the rectangle result of intersecting this with passed rectangle
-         **/
-        intersection(rectangle: Rectangle): Rectangle{
-
-            let a = this;
-            let b = rectangle;
-            let x1: number = Math.max(a.left, b.left);
-            let x2: number = Math.min(a.right, b.right);
-            let y1: number = Math.max(a.top, b.top);
-            let y2: number = Math.min(a.bottom, b.bottom);
-
-            if(x2 >= x1 && y2 >= y1) {
-                return new Rectangle(x1, y1, x2 - x1, y2 - y1);
-            }
-
-            return new Rectangle();
-
-        }
-
-        /**
-         * Gets a value indicating if the rectangle intersects specified rectangle
-         **/
-        intersects(rectangle: Rectangle): boolean{
-            let thisX = this.left;
-            let thisY = this.top;
-            let thisW = this.width;
-            let thisH = this.height;
-            let rectX = rectangle.left;
-            let rectY = rectangle.top;
-            let rectW = rectangle.width;
-            let rectH = rectangle.height;
-            return (rectX < thisX + thisW) && (thisX < (rectX + rectW)) && (rectY < thisY + thisH) && (thisY < rectY + rectH);
-        }
-
-        /**
-         * Returns a rectangle with rounded coordinates
-         * @returns {latte.Rectangle}
-         */
-        round(): Rectangle{
-            let r = Math.round;
-            return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
-        }
-
-        /**
-         * Scales the rectangle to fit the specified size.
-         * @param {latte.Size} size
-         * @returns {latte.Rectangle}
-         */
-        scaleToFit(size: Size){
-            let outer = new Rectangle(this.left, this.top, size.width, size.height);
-            let inner = this.clone();
-            let resizeFactor = inner.aspectRatio >= outer.aspectRatio ?
-                (outer.width / inner.width) : (outer.height / inner.height);
-
-            let newWidth = inner.width * resizeFactor;
-            let newHeight = inner.height * resizeFactor;
-            // let newLeft = outer.left + (outer.width - newWidth) / 2;
-            // let newTop = outer.top + (outer.height - newHeight) / 2;
-
-            return new Rectangle(this.left, this.top, newWidth, newHeight);
-
-        }
-
-        /**
-         * Returns a scaled rectangle
-         * @param width
-         */
-        scaleToHeight(height: number): Rectangle{
-            return new Rectangle(this.left, this.top, height * this.width / this.height, height);
-        }
-
-        /**
-         * Returns a scaled rectangle
-         * @param width
-         */
-        scaleToWidth(width: number): Rectangle{
-            return new Rectangle(this.left, this.top, width, width * this.height / this.width);
-        }
-
-        /**
-         * Returns a string describing the rectangle
-         **/
-        toString(): string{
-
-            return "Rectangle: " + [this._left, this._top, this._width, this._height].join(', ');
-
-        }
-
-        /**
-         * Gets a rectangle representing the union of this rectangle and the passed one
-         **/
-        union(rectangle: Rectangle): Rectangle{
-
-            return Rectangle.fromLRTB(
-                Math.min(this.left, rectangle.left),
-                Math.max(this.right, rectangle.right),
-                Math.min(this.top, rectangle.top),
-                Math.max(this.bottom, rectangle.bottom)
-            );
-
-        }
-
-        /**
-         * Gets the area of the rectangle
-         *
-         * @returns {number}
-         */
-        get area(): number {
-            return this.width * this.height;
-        }
-
-        /**
-         * Gets the aspect ratio of the rectangle
-         *
-         * @returns {number}
-         */
-        public get aspectRatio():number {
-            return this.width / this.height;
-        }
-
-        /**
-         * Gets or sets the right side of the rectangle
-         **/
-        get bottom(): number{
-            return this._top + this._height;
-        }
-
-        /**
-         * Gets or sets the right side of the rectangle
-         **/
-        set bottom(value: number){
-
-            this._height = value - this._top;
-
-
-
-        }
-
-        /**
-         * Gets or sets the center of the rectangle
-         * @returns {latte.Point}
-         */
-        get center(): Point{
-            return new Point(this.left + this.width / 2, this.top + this.height / 2);
-        }
-
-        /**
-         * Gets or sets the center of the rectangle
-         * @param value
-         */
-        set center(value: Point){
-            this.left = value.x - this.width / 2;
-            this.top = value.y - this.height / 2;
-        }
-
-        /**
-         * Gets or sets the height of the rectangle
-         **/
-        get height(): number{
-            return this._height;
-        }
-
-        /**
-         * Gets or sets the height of the rectangle
-         **/
-        set height(value: number){
-            this._height = value;
-        }
-
-        /**
-         * Gets a value indicating if the rectangle is empty
-         *
-         * @returns {boolean}
-         */
-        get isEmpty(): boolean {
-            return this.area == 0 && this.left == 0 && this.top == 0;
-        }
-
-        /**
-         * Gets a value indicating if the rectangle is horizontal
-         *
-         * @returns {boolean}
-         */
-        get isHorizontal(): boolean {
-            return this.width > this.height;
-        }
-
-        /**
-         * Gets a value indicating if the rectangle is a square
-         *
-         * @returns {boolean}
-         */
-        get isSquare(): boolean {
-            return this.width == this.height;
-        }
-
-
-        /**
-         * Gets a value indicating if the rectangle is vertical
-         *
-         * @returns {boolean}
-         */
-        get isVertical(): boolean {
-            return this.height > this.width;
-        }
-
-        /**
-         * Gets or sets the left of the rectangle
-         **/
-        get left(): number{
-            return this._left;
-        }
-
-        /**
-         * Gets or sets the left of the rectangle
-         **/
-        set left(value: number){
-
-            this._left = value;
-
-
-        }
-
-        /**
-         * Gets the location of the rectangle
-         *
-         * @returns {Point}
-         */
-        get location(): Point {
-            return new Point(this.left, this.top);
-        }
-
-        /**
-         * Gets or sets the right side of the rectangle
-         **/
-        get right(): number{
-            return this._left + this._width;
-        }
-
-        /**
-         * Gets or sets the right side of the rectangle
-         **/
-        set right(value: number){
-
-
-            this._width = value - this._left;
-
-
-        }
-
-        /**
-         * Gets the size of the rectangle
-         *
-         * @returns {Size}
-         */
-        get size():Size {
-            return new Size(this.width, this.height);
-        }
-
-        /**
-         * Gets or sets a tag
-         * @returns {any}
-         */
-        get tag(): any{
-            return this._tag;
-        }
-
-        /**
-         * Gets or sets a tag
-         * @param value
-         */
-        set tag(value: any){
-            this._tag = value;
-        }
-
-        /**
-         * Gets or sets the top of the rectangle
-         **/
-        get top(): number{
-            return this._top;
-        }
-
-        /**
-         * Gets or sets the top of the rectangle
-         **/
-        set top(value: number){
-
-
-            this._top = value;
-
-
-        }
-
-        /**
-         * Gets or sets the width of the rectangle
-         **/
-        get width(): number{
-            return this._width;
-        }
-
-        /**
-         * Gets or sets the width of the rectangle
-         **/
-        set width(value: number){
-
-
-            this._width = value;
-
-
-        }
-    }
-
-    /**
-     *
+     * Represents a size vector
      */
-    export class Size {
+    export class Size extends PropertyTarget {
 
         //region Static
         /**
-         * Returns an empty size
-         * @returns {latte.Size}
+         * Gets the default empty size
          */
-        static empty(): Size{
-            return new Size(null, null);
+        static get empty(): Size {
+            return PropertyTarget.getStaticLazyProperty(Size, 'empty', Size, () => {
+                return new Size(0, 0);
+            });
         }
 
-        /**
-         * Returns a size of zero width and zero height
-         * @returns {latte.Point}
-         */
-        static zero(): Size{
-            return new Size(0, 0);
-        }
-        //endregion
-
-        //region Fields
         //endregion
 
         /**
          * Creates a new Size, optionally sets its Width and Height components
          */
-        constructor(width: number = null, height: number = null) {
-            if(width !== null) {
-                this._width = width;
-            }
-
-            if(height !== null) {
-                this._height = height;
-            }
+        constructor(width: number = 0, height: number = 0) {
+            super();
+            this.setPropertyValue('width', width, Number);
+            this.setPropertyValue( 'height', height, Number);
         }
-
-        //region Private Methods
-        //endregion
 
         //region Methods
         /**
@@ -2348,6 +2351,15 @@ export namespace latte{
          */
         contains(size: Size): boolean{
             return this.width >= size.width && this.height >= size.height;
+        }
+
+        /**
+         * Returns a value indicating if the size is
+         * @param {latte.Size} s
+         * @returns {boolean}
+         */
+        equals(s: Size): boolean{
+            return this.width == s.width && this.height == s.height;
         }
 
         /**
@@ -2410,11 +2422,8 @@ export namespace latte{
          * @returns {string}
          */
         toString(): string{
-            return sprintf("Size(%s, %s)", this._width, this._height);
+            return sprintf("(%s, %s)", this.width, this.height);
         }
-        //endregion
-
-        //region Events
         //endregion
 
         //region Properties
@@ -2427,14 +2436,13 @@ export namespace latte{
             return this.width * this.height;
         }
 
-
         /**
          * Gets a value indicating if the size has no compnents assigned or initialized
          *
          * @returns {boolean}
          */
         public get isEmpty():boolean {
-            return this._height == null && this._width == null;
+            return this.width === 0 || this.height === 0;
         }
 
         /**
@@ -2455,7 +2463,6 @@ export namespace latte{
             return this.width == this.height;
         }
 
-
         /**
          * Gets a value indicating if the size is vertical
          *
@@ -2465,206 +2472,450 @@ export namespace latte{
             return this.height > this.width;
         }
 
-
         /**
-         * Property field
+         * Gets the height of the size
          */
-        private _height:number = null;
-
-        /**
-         * Gets the Height component of the size
-         *
-         * @returns {number}
-         */
-        public get height():number {
-            return this._height;
+        get height(): number {
+            return this.getPropertyValue('height', Number, null);
         }
 
         /**
-         * Property field
+         * Gets the width of the size
          */
-        private _width:number = null;
-
-        /**
-         * Gets the Width component of the size
-         *
-         * @returns {number}
-         */
-        public get width():number {
-            return this._width;
+        get width(): number {
+            return this.getPropertyValue('width', Number, null);
         }
 
 
         //endregion
-    }
-
-    export type EventHandler = (...any: any[]) => any;
-
-    export class Eventable{
-
-        //region Fields
-        private eventHandlers: {[name: string]: EventHandler[]} = {};
-        //endregion
-
-        //region Methods
-
-        /**
-         * Handles an event
-         * @param {string} eventName
-         * @param {(...any: any[]) => any} handler
-         */
-        on(eventName: string, handler: EventHandler): this{
-
-            if(!(eventName in this.eventHandlers)) {
-                this.eventHandlers[eventName] = [];
-            }
-
-            this.eventHandlers[eventName].push(handler);
-
-            return this;
-        }
-
-        /**
-         * Raises an event
-         * @param {string} eventName
-         * @param params
-         */
-        raise(eventName: string, ...params: any[]){
-
-            if(eventName in this.eventHandlers) {
-                for(let name in this.eventHandlers)
-                    this.eventHandlers[name].forEach( f => f.call(this, params));
-            }
-
-        }
-
-        //endregion
-
-    }
-
-    export interface DidSet{
-        property: string;
-        oldValue: any;
-        newValue: any;
-    }
-
-    export interface WillSet extends DidSet{}
-
-    export interface SetPropertyOptions{
-        silent?: boolean;
     }
 
     /**
-     * Gives an object property capabilities
-     */
-    export class PropertyTarget extends Eventable{
+     * Reprsents a Rectangle
+     **/
+    export class Rectangle extends PropertyTarget{
 
-        //region Private
-        private propertyValues: {[name: string]: any} = {};
-        //endregion
-
-        //region Protected Methods
+        //region Static
 
         /**
-         * Called before changing the value of a property
-         * @param {latte.WillSet} e
+         * Returns a rectangle at (0,0) of 0 dimensions
+         * @returns {latte.Rectangle}
          */
-        protected willSet(e: WillSet){
-            this.raise('willSet' + _camelCase(e.property), e);
+        static get zero(): Rectangle{
+            return new Rectangle();
         }
 
         /**
-         * Called after chaning the value of a property
-         * @param {latte.DidSet} e
+         * Creates a rectangle with the specified left, right, top and bottom.
+         **/
+        static fromLRTB(left: number, right: number, top: number, bottom: number): Rectangle{
+            return  new Rectangle(left, top, right - left, bottom - top)
+        }
+
+        /**
+         * Creates a rectangle from the specified object (top, left, width, height)
+         * @param obj
          */
-        protected didSet(e: DidSet){
-            this.raise('didSet' + _camelCase(e.property), e);
+        static fromObject(obj: any): Rectangle{
+
+            'left,top,width,height'.split(',').forEach(p => {
+                if(!(p in obj)) {
+                    throw "Missing " + p + " property"
+                }
+            });
+
+            return new Rectangle(obj.left, obj.top, obj.width, obj.height);
+        }
+
+        /**
+         * Creates a rectangle from the specified object (top, left, width, height)
+         * @param obj
+         */
+        static fromObjectLRTB(obj: any): Rectangle{
+
+            'left,right,top,bottom'.split(',').forEach(p => {
+                if(!(p in obj)) {
+                    throw "Missing " + p + " property"
+                }
+            });
+
+            return Rectangle.fromLRTB(obj.left, obj.right, obj.top, obj.bottom);
+        }
+
+        /**
+         * Creates a rectangle of the specified rectangle
+         * @param {HTMLElement} e
+         * @returns {latte.Rectangle}
+         */
+        static fromElement(e: HTMLElement): Rectangle{
+            return Rectangle.fromObject(e.getBoundingClientRect());
         }
 
         //endregion
+
+        /**
+         * Creates a rectangle with the specified left, top, width and height.
+         **/
+        constructor(left: number = 0, top: number = 0, width: number = 0, height: number = 0){
+            super();
+            this.setPropertyValue('top', top, Number);
+            this.setPropertyValue('left', left, Number);
+            this.setPropertyValue('width', width, Number);
+            this.setPropertyValue('height', height, Number);
+
+        }
 
         //region Methods
 
         /**
-         * Gets the value of a property
-         * @param {string} name
-         * @param withDefault
-         * @returns {any}
+         * Returns a rectangle of positive width and height, by changing its coordinates and preserving width and height
          */
-        protected getPropertyValue(name: string, withDefault: any = undefined):any{
-            if(!(name in this.propertyValues)) {
-                this.propertyValues[name] = withDefault;
-            }
-            return this.propertyValues[name];
+        absolute(): Rectangle{
+            let width = Math.abs(this.width);
+            let height = Math.abs(this.height);
+            let left = this.width < 0 ? this.right : this.left;
+            let top = this.height < 0 ? this.bottom : this.top;
+            return new Rectangle(left, top, width, height);
         }
 
         /**
-         * Gets a property in a lazy fashion
-         * @param {string} name
-         * @param {() => T} creator
-         * @returns {T}
+         * Returns a rectangle with ceiling coordinates
+         * @returns {latte.Rectangle}
          */
-        protected getLazyProperty<T>(name: string, creator: () => T): T{
-            if(!(name in this.propertyValues)) {
-                this.propertyValues[name] = creator();
-            }
-            return this.getPropertyValue(name, undefined);
+        ceil(): Rectangle{
+            let r = Math.ceil;
+            return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
         }
 
         /**
-         * Returns a value indicating if there is a value for the specified property
-         * @param {string} name
+         * Returns the result of centering this into the specified container
+         **/
+        centerOn(container: Rectangle): Rectangle{
+            return new Rectangle( container.left + (container.width - this.width) / 2,
+                container.top + (container.height - this.height) / 2, this.width, this.height );
+        }
+
+        /**
+         *
+         * @returns {latte.Rectangle}
+         */
+        clone(): Rectangle{
+            return new Rectangle(this.left, this.top, this.width, this.height);
+        }
+
+        /**
+         * Gets a value indicating if the specified point is contained
+         **/
+        contains(x: number, y: number): boolean{
+
+            return this.left <= x && x <= this.right && this.top <= y && y <= this.bottom;
+
+        }
+
+        /**
+         * Returns a value indicating if the rectangle contains the specified point
+         * @param {latte.Point} point
          * @returns {boolean}
          */
-        protected hasPropertyValue(name: string): boolean{
-            return name in this.propertyValues;
+        containsPoint(point: Point){
+            return this.contains(point.x, point.y);
         }
 
         /**
-         * Sets the value of a property
-         * @param {string} name
-         * @param value
-         */
-        protected setPropertyValue<T>(name: string, value: T, options: SetPropertyOptions = {}): T{
+         * Gets a value indicating if the rectangle is contained inside this rectangle
+         **/
+        containsRectangle(rectangle: Rectangle): boolean{
 
-            let oldValue = this.getPropertyValue(name);
-            let data = {
-                property: name,
-                oldValue: oldValue,
-                newValue: value
-            };
+            return this.contains( rectangle.left, rectangle.top) && this.contains( rectangle.right, rectangle.bottom);
 
-            // Let people know this will change
-            this.willSet(data);
-
-            // Check if a true change was done
-            let changed = oldValue !== data.newValue;
-
-            // Only change if different value
-            if(changed) {
-
-                // Actually change the value
-                this.propertyValues[name] = data.newValue;
-
-                // Let people know
-                if(options.silent !== true) {
-                    this.didSet(data);
-                }
-            }
-
-            return value;
         }
 
         /**
-         * Sets the values of more than one property
-         * @param {{[p: string]: any}} values
-         * @returns {this}
+         * Compares this rectangle with the specified rectangle and returns the result
+         * @param r
+         * @returns {boolean}
          */
-        protected setPropertyValues(values: {[name: string]: any}): this{
-            for(let i in values){
-                this.setPropertyValue(i, values[i]);
+        equals(r: Rectangle): boolean{
+            if(!r) return false;
+            return this.left === r.left && this.top === this.top && this.width === r.width && this.height === r.height;
+        }
+
+        /**
+         * Returns a rectangle with floor coordinates
+         * @returns {latte.Rectangle}
+         */
+        floor(): Rectangle{
+            let r = Math.floor;
+            return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
+        }
+
+        /**
+         * Returns the result of inflating the rectangle vertically and horizontally on each edge.
+         **/
+        inflate(horizontal: number, vertical: number): Rectangle{
+            return Rectangle.fromLRTB(this.left - horizontal, this.right + horizontal,
+                this.top - vertical, this.bottom + vertical);
+
+        }
+
+        /**
+         * Returns the rectangle result of intersecting this with passed rectangle
+         **/
+        intersection(rectangle: Rectangle): Rectangle{
+
+            let a = this;
+            let b = rectangle;
+            let x1: number = Math.max(a.left, b.left);
+            let x2: number = Math.min(a.right, b.right);
+            let y1: number = Math.max(a.top, b.top);
+            let y2: number = Math.min(a.bottom, b.bottom);
+
+            if(x2 >= x1 && y2 >= y1) {
+                return new Rectangle(x1, y1, x2 - x1, y2 - y1);
             }
-            return this;
+
+            return Rectangle.zero;
+
+        }
+
+        /**
+         * Gets a value indicating if the rectangle intersects specified rectangle
+         **/
+        intersects(rectangle: Rectangle): boolean{
+            let thisX = this.left;
+            let thisY = this.top;
+            let thisW = this.width;
+            let thisH = this.height;
+            let rectX = rectangle.left;
+            let rectY = rectangle.top;
+            let rectW = rectangle.width;
+            let rectH = rectangle.height;
+            return (rectX < thisX + thisW) && (thisX < (rectX + rectW)) && (rectY < thisY + thisH) && (thisY < rectY + rectH);
+        }
+
+        /**
+         * Returns a new rectangle on specified location of same size
+         * @param {latte.Point} location
+         */
+        ofLocation(location: Point){
+            return new Rectangle(location.x, location.y, this.width, this.height);
+        }
+
+        /**
+         * Returns a new rectangle with same location, specified size
+         * @param {latte.Size} size
+         * @returns {latte.Rectangle}
+         */
+        ofSize(size: Size): Rectangle{
+            return new Rectangle(this.left, this.top, size.width, size.height);
+        }
+
+        /**
+         * Returns a rectangle with rounded coordinates
+         * @returns {latte.Rectangle}
+         */
+        round(): Rectangle{
+            let r = Math.round;
+            return new Rectangle(r(this.left), r(this.top), r(this.width), r(this.height));
+        }
+
+        /**
+         * Returns a new rectangle that could fill the specified size
+         * @param {latte.Size} size
+         * @returns {latte.Rectangle}
+         */
+        scaleToFill(size: Size): Rectangle{
+            return this.ofSize(this.size.scaleToFill(size));
+        }
+
+        /**
+         * Scales the rectangle to fit the specified size.
+         * @param {latte.Size} size
+         * @returns {latte.Rectangle}
+         */
+        scaleToFit(size: Size): Rectangle{
+            return this.ofSize(this.size.scaleToFit(size));
+
+        }
+
+        /**
+         * Returns a scaled rectangle
+         * @param width
+         */
+        scaleToHeight(height: number): Rectangle{
+            return new Rectangle(this.left, this.top, height * this.width / this.height, height);
+        }
+
+        /**
+         * Returns a scaled rectangle
+         * @param width
+         */
+        scaleToWidth(width: number): Rectangle{
+            return new Rectangle(this.left, this.top, width, width * this.height / this.width);
+        }
+
+        /**
+         * Returns a string describing the rectangle
+         **/
+        toString(): string{
+            return "Rectangle: " + [this.left, this.top, this.width, this.height].join(', ');
+
+        }
+
+        /**
+         * Gets a rectangle representing the union of this rectangle and the passed one
+         **/
+        union(rectangle: Rectangle): Rectangle{
+
+            return Rectangle.fromLRTB(
+                Math.min(this.left, rectangle.left),
+                Math.max(this.right, rectangle.right),
+                Math.min(this.top, rectangle.top),
+                Math.max(this.bottom, rectangle.bottom)
+            );
+
+        }
+
+        //endregion
+
+        //region Properties
+
+        /**
+         * Gets the area of the rectangle
+         *
+         * @returns {number}
+         */
+        get area(): number {
+            return this.size.area;
+        }
+
+        /**
+         * Gets the aspect ratio of the rectangle
+         *
+         * @returns {number}
+         */
+        get aspectRatio():number {
+            return this.width / this.height;
+        }
+
+        /**
+         * Gets or sets the right side of the rectangle
+         **/
+        get bottom(): number{
+            return this.top + this.height;
+        }
+
+        /**
+         * Gets or sets the center of the rectangle
+         * @returns {latte.Point}
+         */
+        get center(): Point{
+            return new Point(this.left + this.width / 2, this.top + this.height / 2);
+        }
+
+        /**
+         * Gets the height of the rectangle
+         */
+        get height(): number {
+            return this.getPropertyValue('height', Number, null);
+        }
+
+        /**
+         * Gets a value indicating if the rectangle is empty
+         *
+         * @returns {boolean}
+         */
+        get isZero(): boolean {
+            return this.size.isEmpty && this.location.isOrigin;
+        }
+
+        /**
+         * Gets a value indicating if the rectangle is horizontal
+         *
+         * @returns {boolean}
+         */
+        get isHorizontal(): boolean {
+            return this.width > this.height;
+        }
+
+        /**
+         * Gets a value indicating if the rectangle is a square
+         *
+         * @returns {boolean}
+         */
+        get isSquare(): boolean {
+            return this.width == this.height;
+        }
+
+        /**
+         * Gets a value indicating if the rectangle is vertical
+         *
+         * @returns {boolean}
+         */
+        get isVertical(): boolean {
+            return this.height > this.width;
+        }
+
+        /**
+         * Gets the left of the rectangle
+         */
+        get left(): number {
+            return this.getPropertyValue('left', Number, null);
+        }
+
+        /**
+         * Gets the location of the rectangle
+         *
+         * @returns {Point}
+         */
+        get location(): Point {
+            return new Point(this.left, this.top);
+        }
+
+        /**
+         * Gets or sets the right side of the rectangle
+         **/
+        get right(): number{
+            return this.left + this.width;
+        }
+
+        /**
+         * Gets the size of the rectangle
+         *
+         * @returns {Size}
+         */
+        get size():Size {
+            return new Size(this.width, this.height);
+        }
+
+        /**
+         * Gets or sets the tag of the rectangle
+         */
+        get tag(): any {
+            return this.getPropertyValue('tag', Any, null);
+        }
+
+        /**
+         * Gets or sets the tag of the rectangle
+         *
+         * @param {any} value
+         */
+        set tag(value: any) {
+            this.setPropertyValue('tag', value, Any);
+        }
+
+        /**
+         * Gets the top of the rectangle
+         */
+        get top(): number {
+            return this.getPropertyValue('top', Number, null);
+        }
+
+        /**
+         * Gets the width of the rectangle
+         */
+        get width(): number {
+            return this.getPropertyValue('width', Number, null);
         }
 
         //endregion

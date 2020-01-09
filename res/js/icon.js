@@ -17,6 +17,7 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
         var Rectangle = latte_1.latte.Rectangle;
         var Illustrator = workspace_1.workspace.Illustrator;
         var CanvasTheme = workspace_1.workspace.CanvasTheme;
+        var Canvas = workspace_1.workspace.Canvas;
         var Size = latte_1.latte.Size;
         var log = latte_1.latte.log;
         var Tool = workspace_1.workspace.Tool;
@@ -28,6 +29,7 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
         var ImageStream = imageutil_1.imageutil.ImageStream;
         var _zeroFill = latte_1.latte._zeroFill;
         var PropertyTarget = latte_1.latte.PropertyTarget;
+        var Optional = latte_1.latte.Optional;
         var Pixel = (function (_super) {
             __extends(Pixel, _super);
             function Pixel() {
@@ -75,21 +77,21 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                 this.b = c.b;
                 this.a = c.a;
             };
-            Pixel.prototype.nearest = function (pallete) {
+            Pixel.prototype.nearest = function (palette) {
                 var _this = this;
                 var min = Number.MAX_VALUE;
                 var minIndex = -1;
-                pallete.forEach(function (c, i) {
+                palette.forEach(function (c, i) {
                     var d = _this.distanceTo(c);
                     min = Math.min(min, d);
                     if (min === d) {
                         minIndex = i;
                     }
                 });
-                return pallete[minIndex];
+                return palette[minIndex];
             };
-            Pixel.prototype.snapToPalette = function (pallete) {
-                var nearest = this.nearest(pallete);
+            Pixel.prototype.snapToPalette = function (palette) {
+                var nearest = this.nearest(palette);
                 this.r = nearest.r;
                 this.g = nearest.g;
                 this.b = nearest.b;
@@ -118,6 +120,29 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                 return icon;
             };
             Icon.legoPalette = function () {
+                var pal = [
+                    Color.white,
+                    Color.red,
+                    Color.blue,
+                    Color.fromHex('ff0'),
+                    Color.black,
+                    Color.fromHex('2bc114'),
+                    Color.fromHex('d9c285'),
+                    Color.fromHex('1b3c71'),
+                    Color.fromHex('555'),
+                    Color.fromHex('bbb'),
+                    Color.fromHex('51311a'),
+                    Color.fromHex('fd9330'),
+                    Color.combine(Color.fromHex('ccc'), Color.red),
+                    Color.combine(Color.fromHex('ccc'), Color.blue),
+                    Color.combine(Color.fromHex('ccc'), Color.fromHex('ff0')),
+                    Color.combine(Color.fromHex('ccc'), Color.fromHex('2bc114')),
+                    Color.combine(Color.fromHex('ccc'), Color.fromHex('fd9330')),
+                ];
+                log(pal.map(function (c) { return c.toHexString(); }));
+                return pal;
+            };
+            Icon.legoPalette_TooLarge = function () {
                 return [
                     new Color(217, 187, 123),
                     new Color(214, 114, 64),
@@ -385,14 +410,14 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             };
             Object.defineProperty(Icon.prototype, "height", {
                 get: function () {
-                    return this.getPropertyValue('height', 0);
+                    return this.getPropertyValue('height', Number, 0);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(Icon.prototype, "pixels", {
                 get: function () {
-                    return this.getPropertyValue('pixels', []);
+                    return this.getPropertyValue('pixels', Array, []);
                 },
                 enumerable: true,
                 configurable: true
@@ -406,7 +431,7 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             });
             Object.defineProperty(Icon.prototype, "width", {
                 get: function () {
-                    return this.getPropertyValue('width', 0);
+                    return this.getPropertyValue('width', Array, 0);
                 },
                 enumerable: true,
                 configurable: true
@@ -442,56 +467,56 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                 var icon = this.icon;
                 if (!this.icon || !this.canvas) {
                     this.setPropertyValues({
-                        canvasRectangle: Rectangle.empty(),
-                        iconRectangle: Rectangle.empty(),
-                        pixelSize: Size.zero()
+                        canvasRectangle: Rectangle.zero,
+                        iconRectangle: Rectangle.zero,
+                        pixelSize: Size.empty
                     });
                 }
                 else {
-                    this.setPropertyValue('canvasRectangle', new Rectangle(0, 0, canvas.width, canvas.height));
+                    this.setPropertyValue('canvasRectangle', new Rectangle(0, 0, canvas.width, canvas.height), Rectangle);
                     this.setPropertyValue('iconRectangle', new Rectangle(0, 0, icon.width, icon.height)
                         .scaleToFit(this.canvasRectangle.size)
-                        .centerOn(this.canvasRectangle));
-                    this.setPropertyValue('pixelSize', new Size(this.iconRectangle.width / icon.width, this.iconRectangle.height / icon.height));
+                        .centerOn(this.canvasRectangle), Rectangle);
+                    this.setPropertyValue('pixelSize', new Size(this.iconRectangle.width / icon.width, this.iconRectangle.height / icon.height), Size);
                 }
             };
             Object.defineProperty(IconProjection.prototype, "canvasRectangle", {
                 get: function () {
-                    return this.getPropertyValue('canvasRectangle', Rectangle.empty());
+                    return this.getPropertyValue('canvasRectangle', Rectangle, Rectangle.zero);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconProjection.prototype, "iconRectangle", {
                 get: function () {
-                    return this.getPropertyValue('iconRectangle', null);
+                    return this.getPropertyValue('iconRectangle', Rectangle, Rectangle.zero);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconProjection.prototype, "pixelSize", {
                 get: function () {
-                    return this.getPropertyValue('pixelSize', Size.zero());
+                    return this.getPropertyValue('pixelSize', Size, Size.empty);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconProjection.prototype, "canvas", {
                 get: function () {
-                    return this.getPropertyValue('canvas', null);
+                    return this.getPropertyValue('canvas', Canvas, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('canvas', value);
+                    this.setPropertyValue('canvas', value, Canvas);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconProjection.prototype, "icon", {
                 get: function () {
-                    return this.getPropertyValue('icon', null);
+                    return this.getPropertyValue('icon', Icon, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('icon', value);
+                    this.setPropertyValue('icon', value, Icon);
                 },
                 enumerable: true,
                 configurable: true
@@ -507,38 +532,47 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                 _this.plugins.push(new ImportFileTool(_this));
                 return _this;
             }
+            IconIllustrator.prototype.checkForProjection = function () {
+                if (!this.projection.isPresent && this.canvas && this.icon) {
+                    this.setPropertyValue('projection', Optional.of(new IconProjection(this.icon, this.canvas)), Optional);
+                }
+            };
             IconIllustrator.prototype.draw = function () {
-                this.projection.update();
+                this.projection.ifPresent(function (p) { return p.update(); });
                 var gridThreshold = 10;
                 this.drawIcon();
-                if (this.projection.pixelSize.width >= gridThreshold) {
-                }
+                this.projection.ifPresent(function (p) {
+                    if (p.pixelSize.width >= gridThreshold) {
+                    }
+                });
             };
             IconIllustrator.prototype.drawGrid = function () {
                 var _this = this;
-                var iconRect = this.projection.iconRectangle;
-                var pixelSize = this.projection.pixelSize;
-                var context = this.canvas.context;
-                context.strokeStyle = CanvasTheme.gridColor.toHexString();
-                var drawRow = function (row) {
-                    var y = iconRect.top + row * pixelSize.height;
-                    _this.drawLine(iconRect.left, y, iconRect.right, y);
-                };
-                var drawCol = function (col) {
-                    var x = iconRect.left + col * pixelSize.width;
-                    _this.drawLine(x, iconRect.top, x, iconRect.bottom);
-                };
-                for (var row = 0; row <= this.icon.height; row++)
-                    drawRow(row);
-                for (var col = 0; col <= this.icon.width; col++)
-                    drawCol(col);
+                this.projection.ifPresent(function (projection) {
+                    var iconRect = projection.iconRectangle;
+                    var pixelSize = projection.pixelSize;
+                    var context = _this.canvas.context;
+                    context.strokeStyle = CanvasTheme.gridColor.toHexString();
+                    var drawRow = function (row) {
+                        var y = iconRect.top + row * pixelSize.height;
+                        _this.drawLine(iconRect.left, y, iconRect.right, y);
+                    };
+                    var drawCol = function (col) {
+                        var x = iconRect.left + col * pixelSize.width;
+                        _this.drawLine(x, iconRect.top, x, iconRect.bottom);
+                    };
+                    for (var row = 0; row <= _this.icon.height; row++)
+                        drawRow(row);
+                    for (var col = 0; col <= _this.icon.width; col++)
+                        drawCol(col);
+                });
             };
             IconIllustrator.prototype.drawIcon = function () {
                 for (var y = 0; y < this.icon.height; y++) {
                     for (var x = 0; x < this.icon.width; x++) {
                         var px = this.icon.getPixel(x, y);
-                        if (px) {
-                            this.drawRectangle(this.projection.getPixelRect(x, y), px);
+                        if (px && this.projection.isPresent) {
+                            this.drawRectangle(this.projection.orThrow().getPixelRect(x, y), px);
                         }
                     }
                 }
@@ -573,46 +607,48 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                         if (!this.base)
                             this.saveBase();
                     }
-                    this.projection.icon = this.icon;
+                    this.projection.ifPresent(function (p) { return p.icon = _this.icon; });
+                    this.checkForProjection();
                 }
                 else if (e.property == 'canvas') {
-                    this.projection.canvas = this.canvas;
+                    this.projection.ifPresent(function (p) { return p.canvas = _this.canvas; });
+                    this.checkForProjection();
                 }
             };
             IconIllustrator.prototype.saveBase = function (icon) {
                 if (icon === void 0) { icon = null; }
-                this.setPropertyValue('base', icon || this.icon.clone());
+                this.setPropertyValue('base', icon || this.icon.clone(), Icon);
             };
             Object.defineProperty(IconIllustrator.prototype, "base", {
                 get: function () {
-                    return this.getPropertyValue('base', null);
+                    return this.getPropertyValue('base', Icon, null);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconIllustrator.prototype, "icon", {
                 get: function () {
-                    return this.getPropertyValue('icon', null);
+                    return this.getPropertyValue('icon', Icon, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('icon', value);
+                    this.setPropertyValue('icon', value, Icon);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconIllustrator.prototype, "original", {
                 get: function () {
-                    return this.getPropertyValue('original', null);
+                    return this.getPropertyValue('original', ImageStream, null);
                 },
                 set: function (value) {
-                    this.setPropertyValue('original', value);
+                    this.setPropertyValue('original', value, ImageStream);
                 },
                 enumerable: true,
                 configurable: true
             });
             Object.defineProperty(IconIllustrator.prototype, "projection", {
                 get: function () {
-                    return this.getPropertyValue('projection', new IconProjection(null, null));
+                    return this.getPropertyValue('projection', Optional, Optional.empty());
                 },
                 enumerable: true,
                 configurable: true
@@ -636,9 +672,12 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                     this.down = false;
                 }
                 else if (mouse == Mouse.MOVE) {
-                    var p = this.illustrator.projection.getPixelAt(e.offsetX, e.offsetY);
-                    if (this.down && p) {
-                        this.illustrator.icon.getPixel(p.x, p.y).setColor(Color.red);
+                    var p_1 = null;
+                    this.illustrator.projection.ifPresent(function (projection) {
+                        return p_1 = projection.getPixelAt(e.offsetX, e.offsetY);
+                    });
+                    if (this.down && p_1) {
+                        this.illustrator.icon.getPixel(p_1.x, p_1.y).setColor(Color.red);
                     }
                 }
             };
