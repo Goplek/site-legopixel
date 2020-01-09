@@ -168,7 +168,10 @@ export namespace icon{
             return icon;
         }
 
+
+
         static legoPalette(): Color[]{
+            https://www.aliexpress.com/item/968747041.html?src=google&src=google&albch=shopping&acnt=494-037-6276&isdl=y&slnk=&plac=&mtctp=&albbt=Google_7_shopping&aff_platform=google&aff_short_key=UneMJZVf&&albagn=888888&albcp=1582410664&albag=59754279756&trgt=743612850714&crea=en968747041&netw=u&device=c&gclid=CjwKCAiAu9vwBRAEEiwAzvjq-wcA3Bgj8mtUW-S7dEY8MxaBwJM0a-o2t4-TQqJjg6T9VS_AAnD-HBoCTsoQAvD_BwE&gclsrc=aw.ds
             let pal = [
                 Color.white.withTag("White 302401/3024"), // 302401/3024
                 Color.red.withTag("Red 302421/3024"), // 302421/3024
@@ -182,6 +185,17 @@ export namespace icon{
                 Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"), // medium stone grey 4211399/3024
                 Color.fromHex('51311a').withTag("Brown 4221744/3024"), //brown 4221744/3024
                 Color.fromHex('fd9330').withTag("Orange 4524929/3024"), //orange 4524929/3024
+            ];
+            log(pal.map(c => c.toHexString()));
+            return pal;
+        }
+
+        static legoPaletteGrayscale(): Color[]{
+            let pal = [
+                Color.white.withTag("White 302401/3024"), // 302401/3024
+                Color.black.withTag("Black 302426/3024"), // 302426/3024
+                Color.fromHex('555').withTag("Dark Grey 4210719/3024"), // dark stone grey 4210719/3024
+                Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"), // medium stone grey 4211399/3024
             ];
             log(pal.map(c => c.toHexString()));
             return pal;
@@ -362,9 +376,9 @@ export namespace icon{
         /**
          * This should be in another software layer
          */
-        stickToPalette(pal: Color[]){
+        stickToPalette(pal: Color[], kernel = 0){
 
-            let a32 = this.dither(pal);
+            let a32 = this.dither(pal, kernel);
             this.importUint32Array(a32);
             //this.snapToPalette(pal || this.getPaletteColors());
             // log(this.colorStatistics());
@@ -447,7 +461,7 @@ export namespace icon{
          * @param {boolean} serpentine
          * @returns {Uint32Array}
          */
-        dither(pal: Color[] = null, kernel: string = 'FloydSteinberg', serpentine:boolean = true): Uint32Array {
+        dither(pal: Color[] = null, kernel: number = 0, serpentine:boolean = false): Uint32Array {
             // http://www.tannerhelland.com/4660/dithering-eleven-algorithms-source-code/
             let kernels: {[name:string]:number[][]} = {
                 FloydSteinberg: [
@@ -533,8 +547,19 @@ export namespace icon{
                     [1 / 4, 0, 1],
                 ],
             };
+            let names = [
+                "FloydSteinberg",
+                "FalseFloydSteinberg",
+                "Stucki",
+                "Atkinson",
+                "Jarvis",
+                "Burkes",
+                "Sierra",
+                "TwoSierra",
+                "SierraLite"
+            ];
 
-            if (!kernel || !kernels[kernel]) {
+            if (kernel < 0 || kernel > names.length - 1) {
                 throw 'Unknown dithering kernel: ' + kernel;
             }
 
@@ -551,24 +576,24 @@ export namespace icon{
                     nearest.r;			// red
             };
 
-            var ds: number[][] = kernels[kernel];
+            let ds: number[][] = kernels[names[kernel]];
 
-            var buf32 = this.toUint32Array(),
+            let buf32 = this.toUint32Array(),
                 width = this.width,
                 height = this.height;
-            let len = buf32.length;
+            // let len = buf32.length;
 
-            var dir = serpentine ? -1 : 1;
+            let dir = serpentine ? -1 : 1;
 
-            for (var y = 0; y < height; y++) {
+            for (let y = 0; y < height; y++) {
                 if (serpentine)
                     dir = dir * -1;
 
-                var lni = y * width;
+                let lni = y * width;
 
-                for (var x = (dir == 1 ? 0 : width - 1), xend = (dir == 1 ? width : 0); x !== xend; x += dir) {
+                for (let x = (dir == 1 ? 0 : width - 1), xend = (dir == 1 ? width : 0); x !== xend; x += dir) {
                     // Image pixel
-                    var idx = lni + x,
+                    let idx = lni + x,
                         i32 = buf32[idx],
                         r1 = (i32 & 0xff),
                         g1 = (i32 & 0xff00) >> 8,
@@ -576,7 +601,7 @@ export namespace icon{
 
                     // Reduced pixel
                     // var i32x = this.nearestColor(i32),
-                    var i32x = nearest(i32),
+                    let i32x = nearest(i32),
                         r2 = (i32x & 0xff),
                         g2 = (i32x & 0xff00) >> 8,
                         b2 = (i32x & 0xff0000) >> 16;
@@ -595,25 +620,25 @@ export namespace icon{
                     // }
 
                     // Component distance
-                    var er = r1 - r2,
+                    let er = r1 - r2,
                         eg = g1 - g2,
                         eb = b1 - b2;
 
-                    for (var i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
-                        var x1 = ds[i][1] * dir,
+                    for (let i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
+                        let x1 = ds[i][1] * dir,
                             y1 = ds[i][2];
 
-                        var lni2 = y1 * width;
+                        let lni2 = y1 * width;
 
                         if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
-                            var d = ds[i][0];
-                            var idx2 = idx + (lni2 + x1);
+                            let d = ds[i][0];
+                            let idx2 = idx + (lni2 + x1);
 
-                            var r3 = (buf32[idx2] & 0xff),
+                            let r3 = (buf32[idx2] & 0xff),
                                 g3 = (buf32[idx2] & 0xff00) >> 8,
                                 b3 = (buf32[idx2] & 0xff0000) >> 16;
 
-                            var r4 = Math.max(0, Math.min(255, r3 + er * d)),
+                            let r4 = Math.max(0, Math.min(255, r3 + er * d)),
                                 g4 = Math.max(0, Math.min(255, g3 + eg * d)),
                                 b4 = Math.max(0, Math.min(255, b3 + eb * d));
 

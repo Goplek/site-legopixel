@@ -470,6 +470,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                     this.sidebar.add([
                         this.brightnessSlider,
                         this.contrastSlider,
+                        this.kernelSlider,
                         this.sizeSlider,
                         this.widthSlider,
                         this.heightSlider,
@@ -484,6 +485,17 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                     var _this = this;
                     return this.getLazyProperty('brightnessSlider', Slider, function () {
                         return new Slider("Brightness")
+                            .attachTo(_this.sidebar);
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Workspace.prototype, "kernelSlider", {
+                get: function () {
+                    var _this = this;
+                    return this.getLazyProperty('kernelSlider', Slider, function () {
+                        return new Slider("Kernel")
                             .attachTo(_this.sidebar);
                     });
                 },

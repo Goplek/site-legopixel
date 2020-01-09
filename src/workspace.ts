@@ -756,6 +756,7 @@ export namespace workspace{
                 this.sidebar.add([
                     this.brightnessSlider,
                     this.contrastSlider,
+                    this.kernelSlider,
                     this.sizeSlider,
                     this.widthSlider,
                     this.heightSlider,
@@ -794,6 +795,16 @@ export namespace workspace{
         get brightnessSlider(): Slider {
             return this.getLazyProperty('brightnessSlider', Slider, () => {
                 return new Slider("Brightness")
+                    .attachTo(this.sidebar);
+            });
+        }
+
+        /**
+         * Gets the kernel slider
+         */
+        get kernelSlider(): Slider {
+            return this.getLazyProperty('kernelSlider', Slider, () => {
+                return new Slider("Kernel")
                     .attachTo(this.sidebar);
             });
         }

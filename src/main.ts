@@ -28,7 +28,7 @@ export const run = () =>{
 
         icon.contrast(parseInt(ws.contrastSlider.value));
         icon.bright(parseInt(ws.brightnessSlider.value));
-        icon.stickToPalette(pal);
+        icon.stickToPalette(pal, parseInt(ws.kernelSlider.value, 10));
         ws.testLabel.text = JSON.stringify(icon.colorStatistics(pal), null, 2);
         // log(icon.colorStatistics(pal));
 
@@ -69,6 +69,10 @@ export const run = () =>{
         .initRange(-255, 255, 1, 0)
         .on('didSetValue', () => applyFilters());
 
+    ws.kernelSlider
+        .initRange(0, 8, 1, 1)
+        .on('didSetValue', () => applyFilters());
+
     ws.sizeSlider
         .initRange(32,192,32, Workspace.START_SIZE)
         .on('didSetValue', () => {
@@ -103,7 +107,7 @@ export const run = () =>{
                     pal = [Color.black, Color.white];
                     break;
                 case 2:
-                    pal = [Color.black, Color.white, Color.fromHex('555'), Color.fromHex('bbb')];
+                    pal = Icon.legoPaletteGrayscale();
                     break;
                 case 3:
                     pal = [Color.black, Color.white, Color.red];

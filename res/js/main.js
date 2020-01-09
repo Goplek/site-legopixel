@@ -16,7 +16,7 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
             var icon = illustrator.base.clone();
             icon.contrast(parseInt(ws.contrastSlider.value));
             icon.bright(parseInt(ws.brightnessSlider.value));
-            icon.stickToPalette(pal);
+            icon.stickToPalette(pal, parseInt(ws.kernelSlider.value, 10));
             ws.testLabel.text = JSON.stringify(icon.colorStatistics(pal), null, 2);
             illustrator.icon = icon;
         };
@@ -40,6 +40,9 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
             .on('didSetValue', function () { return applyFilters(); });
         ws.contrastSlider
             .initRange(-255, 255, 1, 0)
+            .on('didSetValue', function () { return applyFilters(); });
+        ws.kernelSlider
+            .initRange(0, 8, 1, 1)
             .on('didSetValue', function () { return applyFilters(); });
         ws.sizeSlider
             .initRange(32, 192, 32, Workspace.START_SIZE)
@@ -65,7 +68,7 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
                     pal = [Color.black, Color.white];
                     break;
                 case 2:
-                    pal = [Color.black, Color.white, Color.fromHex('555'), Color.fromHex('bbb')];
+                    pal = Icon.legoPaletteGrayscale();
                     break;
                 case 3:
                     pal = [Color.black, Color.white, Color.red];

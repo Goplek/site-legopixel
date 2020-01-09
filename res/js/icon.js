@@ -137,6 +137,16 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                 log(pal.map(function (c) { return c.toHexString(); }));
                 return pal;
             };
+            Icon.legoPaletteGrayscale = function () {
+                var pal = [
+                    Color.white.withTag("White 302401/3024"),
+                    Color.black.withTag("Black 302426/3024"),
+                    Color.fromHex('555').withTag("Dark Grey 4210719/3024"),
+                    Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"),
+                ];
+                log(pal.map(function (c) { return c.toHexString(); }));
+                return pal;
+            };
             Icon.legoPaletteWithTransparents = function () {
                 var pal = [
                     Color.white.withTag("White 302401/3024"),
@@ -254,8 +264,9 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             Icon.prototype.getPixelTuples = function () {
                 return this.pixels.map(function (p) { return [p.r, p.g, p.b]; });
             };
-            Icon.prototype.stickToPalette = function (pal) {
-                var a32 = this.dither(pal);
+            Icon.prototype.stickToPalette = function (pal, kernel) {
+                if (kernel === void 0) { kernel = 0; }
+                var a32 = this.dither(pal, kernel);
                 this.importUint32Array(a32);
             };
             Icon.prototype.setPixel = function (x, y, p) {
@@ -304,8 +315,8 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             };
             Icon.prototype.dither = function (pal, kernel, serpentine) {
                 if (pal === void 0) { pal = null; }
-                if (kernel === void 0) { kernel = 'FloydSteinberg'; }
-                if (serpentine === void 0) { serpentine = true; }
+                if (kernel === void 0) { kernel = 0; }
+                if (serpentine === void 0) { serpentine = false; }
                 var kernels = {
                     FloydSteinberg: [
                         [7 / 16, 1, 0],
@@ -390,7 +401,18 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                         [1 / 4, 0, 1],
                     ],
                 };
-                if (!kernel || !kernels[kernel]) {
+                var names = [
+                    "FloydSteinberg",
+                    "FalseFloydSteinberg",
+                    "Stucki",
+                    "Atkinson",
+                    "Jarvis",
+                    "Burkes",
+                    "Sierra",
+                    "TwoSierra",
+                    "SierraLite"
+                ];
+                if (kernel < 0 || kernel > names.length - 1) {
                     throw 'Unknown dithering kernel: ' + kernel;
                 }
                 var legoPal = pal;
@@ -404,9 +426,8 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                         (nearest.g << 8) |
                         nearest.r;
                 };
-                var ds = kernels[kernel];
+                var ds = kernels[names[kernel]];
                 var buf32 = this.toUint32Array(), width = this.width, height = this.height;
-                var len = buf32.length;
                 var dir = serpentine ? -1 : 1;
                 for (var y = 0; y < height; y++) {
                     if (serpentine)
