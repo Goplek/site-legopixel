@@ -29,7 +29,8 @@ export const run = () =>{
         icon.contrast(parseInt(ws.contrastSlider.value));
         icon.bright(parseInt(ws.brightnessSlider.value));
         icon.stickToPalette(pal);
-        log(icon.colorStatistics(pal));
+        ws.testLabel.text = JSON.stringify(icon.colorStatistics(pal), null, 2);
+        // log(icon.colorStatistics(pal));
 
         illustrator.icon = icon;
     };

@@ -8,7 +8,7 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], function (require, exports, ui_1, viewport_1, latte_1, linearicon_1) {
+define(["require", "exports", "./ui", "./viewport", "./latte"], function (require, exports, ui_1, viewport_1, latte_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var workspace;
@@ -18,8 +18,6 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
         var DivElement = ui_1.ui.DivElement;
         var InputElement = ui_1.ui.InputElement;
         var Label = ui_1.ui.LabelItem;
-        var Optional = latte_1.latte.Optional;
-        var LinearIcon = linearicon_1.linearicon.LinearIcon;
         var Mouse;
         (function (Mouse) {
             Mouse[Mouse["UP"] = 0] = "UP";
@@ -478,7 +476,6 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
                         this.colorSlider,
                         this.testLabel
                     ]);
-                    this.testLabel.icon = Optional.of(LinearIcon.cross);
                     setInterval(function () { return _this.divFps.html = _this.canvas.fps + "fps"; }, 500);
                 }
             };
@@ -578,7 +575,9 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
             Object.defineProperty(Workspace.prototype, "testLabel", {
                 get: function () {
                     return this.getLazyProperty('testLabel', Label, function () {
-                        return new Label('Some Text');
+                        var lbl = new Label('[Result]');
+                        lbl.raw.style.whiteSpace = 'pre';
+                        return lbl;
                     });
                 },
                 enumerable: true,

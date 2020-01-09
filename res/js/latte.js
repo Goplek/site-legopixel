@@ -561,6 +561,16 @@ define(["require", "exports"], function (require, exports) {
                 enumerable: true,
                 configurable: true
             });
+            Object.defineProperty(Color.prototype, "tag", {
+                get: function () {
+                    return this.getPropertyValue('tag', String, "");
+                },
+                set: function (value) {
+                    this.setPropertyValue('tag', value, String);
+                },
+                enumerable: true,
+                configurable: true
+            });
             Color.prototype.equals = function (c) {
                 return c.a == this.a && c.r === this.r && c.g === this.g && c.b === this.b;
             };
@@ -599,6 +609,10 @@ define(["require", "exports"], function (require, exports) {
                 else {
                     return this.toHexString();
                 }
+            };
+            Color.prototype.withTag = function (tag) {
+                this.tag = tag;
+                return this;
             };
             Object.defineProperty(Color.prototype, "a", {
                 get: function () {

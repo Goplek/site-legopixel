@@ -170,18 +170,18 @@ export namespace icon{
 
         static legoPalette(): Color[]{
             let pal = [
-                Color.white, // 302401/3024
-                Color.red, // 302421/3024
-                Color.blue, // 302423/3024
-                Color.fromHex('ff0'), // bright yellow 302424/3024
-                Color.black, // 302426/3024
-                Color.fromHex('2bc114'), //green 302428/3024
-                Color.fromHex('d9c285'), //sand 4159553/3024
-                Color.fromHex('1b3c71'), //navy 4184108/3024
-                Color.fromHex('555'), // dark stone grey 4210719/3024
-                Color.fromHex('bbb'), // medium stone grey 4211399/3024
-                Color.fromHex('51311a'), //brown 4221744/3024
-                Color.fromHex('fd9330'), //orange 4524929/3024
+                Color.white.withTag("White 302401/3024"), // 302401/3024
+                Color.red.withTag("Red 302421/3024"), // 302421/3024
+                Color.blue.withTag("Blue 302423/3024"), // 302423/3024
+                Color.fromHex('ff0').withTag("Yellow 302424/3024"), // bright yellow 302424/3024
+                Color.black.withTag("Black 302426/3024"), // 302426/3024
+                Color.fromHex('2bc114').withTag("Green 302428/3024"), //green 302428/3024
+                Color.fromHex('d9c285').withTag("Sand 4159553/3024"), //sand 4159553/3024
+                Color.fromHex('1b3c71').withTag("Navy 4184108/3024"), //navy 4184108/3024
+                Color.fromHex('555').withTag("Dark Grey 4210719/3024"), // dark stone grey 4210719/3024
+                Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"), // medium stone grey 4211399/3024
+                Color.fromHex('51311a').withTag("Brown 4221744/3024"), //brown 4221744/3024
+                Color.fromHex('fd9330').withTag("Orange 4524929/3024"), //orange 4524929/3024
             ];
             log(pal.map(c => c.toHexString()));
             return pal;
@@ -189,23 +189,23 @@ export namespace icon{
 
         static legoPaletteWithTransparents(): Color[]{
             let pal = [
-                Color.white, // 302401/3024
-                Color.red, // 302421/3024
-                Color.blue, // 302423/3024
-                Color.fromHex('ff0'), // bright yellow 302424/3024
-                Color.black, // 302426/3024
-                Color.fromHex('2bc114'), //green 302428/3024
-                Color.fromHex('d9c285'), //sand 4159553/3024
-                Color.fromHex('1b3c71'), //navy 4184108/3024
-                Color.fromHex('555'), // dark stone grey 4210719/3024
-                Color.fromHex('bbb'), // medium stone grey 4211399/3024
-                Color.fromHex('51311a'), //brown 4221744/3024
-                Color.fromHex('fd9330'), //orange 4524929/3024
-                Color.combine(Color.fromHex('555'), Color.red),
-                Color.combine(Color.fromHex('555'), Color.blue),
-                Color.combine(Color.fromHex('555'), Color.fromHex('ff0')),
-                Color.combine(Color.fromHex('555'), Color.fromHex('2bc114')),
-                Color.combine(Color.fromHex('555'), Color.fromHex('fd9330')),
+                Color.white.withTag("White 302401/3024"), // 302401/3024
+                Color.red.withTag("Red 302421/3024"), // 302421/3024
+                Color.blue.withTag("Blue 302423/3024"), // 302423/3024
+                Color.fromHex('ff0').withTag("Yellow 302424/3024"), // bright yellow 302424/3024
+                Color.black.withTag("Black 302426/3024"), // 302426/3024
+                Color.fromHex('2bc114').withTag("Green 302428/3024"), //green 302428/3024
+                Color.fromHex('d9c285').withTag("Sand 4159553/3024"), //sand 4159553/3024
+                Color.fromHex('1b3c71').withTag("Navy 4184108/3024"), //navy 4184108/3024
+                Color.fromHex('555').withTag("Dark Grey 4210719/3024"), // dark stone grey 4210719/3024
+                Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"), // medium stone grey 4211399/3024
+                Color.fromHex('51311a').withTag("Brown 4221744/3024"), //brown 4221744/3024
+                Color.fromHex('fd9330').withTag("Orange 4524929/3024"), //orange 4524929/3024
+                Color.combine(Color.fromHex('bbb'), Color.red).withTag("Trans Red"),
+                Color.combine(Color.fromHex('bbb'), Color.blue).withTag("Trans Blue"),
+                Color.combine(Color.fromHex('bbb'), Color.fromHex('ff0')).withTag("Trans Yellow"),
+                Color.combine(Color.fromHex('bbb'), Color.fromHex('2bc114')).withTag("Trans Green"),
+                Color.combine(Color.fromHex('bbb'), Color.fromHex('fd9330')).withTag("Trans Orange"),
             ];
             log(pal.map(c => c.toHexString()));
             return pal;
@@ -280,9 +280,16 @@ export namespace icon{
             let zero = (color: Color):string => {
                 return _zeroFill(3, color.r) + _zeroFill(3, color.g) + _zeroFill(3, color.b)
             };
+            let paletteColorTag = (colorCode: string): string => {
+                for(let palColor of p){
+                    if(zero(palColor) == colorCode) {
+                        return palColor.tag;
+                    }
+                }
+                return colorCode;
+            };
             let pal = p.map(c => zero(c));
             let result: {[color: string]: number} = {};
-
 
             this.pixels.forEach(p => {
                 let code = zero(p);
@@ -293,11 +300,19 @@ export namespace icon{
                 result[code] = count + 1;
             });
 
+            let filtered: {[color: string]: number} = {};
             let colors = 0;
-            for(let code in result) colors++;
+            for(let code in result) {
+                if(result[code] > 1) {
+                    colors++;
+                    filtered[paletteColorTag(code)] = result[code];
+                }
+            }
+
             log(`colors: ${colors}`);
 
-            return result;
+
+            return filtered;
 
         }
         //endregion

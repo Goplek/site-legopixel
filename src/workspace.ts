@@ -766,7 +766,7 @@ export namespace workspace{
                 //TODO: Working on toolbarView
 
                 // this.testLabel.description = Optional.of("desc");
-                this.testLabel.icon = Optional.of(LinearIcon.cross);
+                // this.testLabel.icon = Optional.of(LinearIcon.cross);
 
                 // let splitView = new SplitView();
                 // splitView.side = Side.RIGHT;
@@ -883,7 +883,9 @@ export namespace workspace{
          */
         get testLabel(): Label {
             return this.getLazyProperty('testLabel', Label, () => {
-                return new Label('Some Text');
+                let lbl = new Label('[Result]');
+                lbl.raw.style.whiteSpace = 'pre';
+                return lbl;
             });
         }
 
