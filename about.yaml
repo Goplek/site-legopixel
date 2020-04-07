@@ -1,0 +1,5 @@
+domain:
+  master: lego.jose.page
+ssl:
+  host: lego.jose.page
+  email: webmaster@lego.jose.page

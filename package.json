@@ -3,7 +3,7 @@
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "compile": "tsc",
     "test": "nyc mocha -r ts-node/register -r jsdom-global/register test/**/*.spec.ts",
-    "build": "tsc --module amd --removeComments true --outDir res/js"
+    "build": "tsc --module amd --removeComments true --outDir html/res/js"
   },
   "devDependencies": {
     "@types/mocha": "^7.0.2",
