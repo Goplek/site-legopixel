@@ -168,10 +168,8 @@ export namespace icon{
             return icon;
         }
 
-
-
         static legoPalette(): Color[]{
-            https://www.aliexpress.com/item/968747041.html?src=google&src=google&albch=shopping&acnt=494-037-6276&isdl=y&slnk=&plac=&mtctp=&albbt=Google_7_shopping&aff_platform=google&aff_short_key=UneMJZVf&&albagn=888888&albcp=1582410664&albag=59754279756&trgt=743612850714&crea=en968747041&netw=u&device=c&gclid=CjwKCAiAu9vwBRAEEiwAzvjq-wcA3Bgj8mtUW-S7dEY8MxaBwJM0a-o2t4-TQqJjg6T9VS_AAnD-HBoCTsoQAvD_BwE&gclsrc=aw.ds
+            //https://www.aliexpress.com/item/968747041.html?src=google&src=google&albch=shopping&acnt=494-037-6276&isdl=y&slnk=&plac=&mtctp=&albbt=Google_7_shopping&aff_platform=google&aff_short_key=UneMJZVf&&albagn=888888&albcp=1582410664&albag=59754279756&trgt=743612850714&crea=en968747041&netw=u&device=c&gclid=CjwKCAiAu9vwBRAEEiwAzvjq-wcA3Bgj8mtUW-S7dEY8MxaBwJM0a-o2t4-TQqJjg6T9VS_AAnD-HBoCTsoQAvD_BwE&gclsrc=aw.ds
             let pal = [
                 Color.white.withTag("White 302401/3024"), // 302401/3024
                 Color.red.withTag("Red 302421/3024"), // 302421/3024
@@ -186,6 +184,31 @@ export namespace icon{
                 Color.fromHex('51311a').withTag("Brown 4221744/3024"), //brown 4221744/3024
                 Color.fromHex('fd9330').withTag("Orange 4524929/3024"), //orange 4524929/3024
             ];
+            (pal as any).name = "Lego Official Colors";
+            log(pal.map(c => c.toHexString()));
+            return pal;
+        }
+
+        static sharpiePalette(): Color[]{
+            let pal = [
+                Color.white.withTag("White"),
+                Color.black.withTag("Black"),
+                Color.fromHex('#8F573B').withTag("Brown"),
+                Color.fromHex('#F14540').withTag("Red"),
+                Color.fromHex('#FF6E3B').withTag("Orange"),
+                Color.fromHex('#FFA05E').withTag("Salmon"),
+                Color.fromHex('#FFAE8D').withTag("Pink"),
+                Color.fromHex('#FFF959').withTag("Yellow"),
+                Color.fromHex('#95D872').withTag("Green"),
+                Color.fromHex('#86D6AB').withTag("Green Light"),
+                Color.fromHex('#3FC7FD').withTag("Blue"),
+                Color.fromHex('#2373F3').withTag("Blue Royal"),
+                Color.fromHex('#786D6E').withTag("Gray"),
+                Color.fromHex('#C333AF').withTag("Purple"),
+                Color.fromHex('#5F1B7A').withTag("Dark Purple"),
+
+            ];
+            (pal as any).name = "Sharpie Colors";
             log(pal.map(c => c.toHexString()));
             return pal;
         }
@@ -221,6 +244,7 @@ export namespace icon{
                 Color.combine(Color.fromHex('bbb'), Color.fromHex('2bc114')).withTag("Trans Green"),
                 Color.combine(Color.fromHex('bbb'), Color.fromHex('fd9330')).withTag("Trans Orange"),
             ];
+            (pal as any).name = "Lego with Transparent Colors";
             log(pal.map(c => c.toHexString()));
             return pal;
         }

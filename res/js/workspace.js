@@ -471,7 +471,6 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                         this.brightnessSlider,
                         this.contrastSlider,
                         this.kernelSlider,
-                        this.sizeSlider,
                         this.widthSlider,
                         this.heightSlider,
                         this.colorSlider,
@@ -595,7 +594,7 @@ define(["require", "exports", "./ui", "./viewport", "./latte"], function (requir
                 enumerable: true,
                 configurable: true
             });
-            Workspace.START_SIZE = 64;
+            Workspace.START_SIZE = 48;
             return Workspace;
         }(DivElement));
         workspace.Workspace = Workspace;

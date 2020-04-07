@@ -134,6 +134,29 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                     Color.fromHex('51311a').withTag("Brown 4221744/3024"),
                     Color.fromHex('fd9330').withTag("Orange 4524929/3024"),
                 ];
+                pal.name = "Lego Official Colors";
+                log(pal.map(function (c) { return c.toHexString(); }));
+                return pal;
+            };
+            Icon.sharpiePalette = function () {
+                var pal = [
+                    Color.white.withTag("White"),
+                    Color.black.withTag("Black"),
+                    Color.fromHex('#8F573B').withTag("Brown"),
+                    Color.fromHex('#F14540').withTag("Red"),
+                    Color.fromHex('#FF6E3B').withTag("Orange"),
+                    Color.fromHex('#FFA05E').withTag("Salmon"),
+                    Color.fromHex('#FFAE8D').withTag("Pink"),
+                    Color.fromHex('#FFF959').withTag("Yellow"),
+                    Color.fromHex('#95D872').withTag("Green"),
+                    Color.fromHex('#86D6AB').withTag("Green Light"),
+                    Color.fromHex('#3FC7FD').withTag("Blue"),
+                    Color.fromHex('#2373F3').withTag("Blue Royal"),
+                    Color.fromHex('#786D6E').withTag("Gray"),
+                    Color.fromHex('#C333AF').withTag("Purple"),
+                    Color.fromHex('#5F1B7A').withTag("Dark Purple"),
+                ];
+                pal.name = "Sharpie Colors";
                 log(pal.map(function (c) { return c.toHexString(); }));
                 return pal;
             };
@@ -167,6 +190,7 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                     Color.combine(Color.fromHex('bbb'), Color.fromHex('2bc114')).withTag("Trans Green"),
                     Color.combine(Color.fromHex('bbb'), Color.fromHex('fd9330')).withTag("Trans Orange"),
                 ];
+                pal.name = "Lego with Transparent Colors";
                 log(pal.map(function (c) { return c.toHexString(); }));
                 return pal;
             };

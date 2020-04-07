@@ -724,7 +724,7 @@ export namespace workspace{
 
     export class Workspace extends DivElement{
 
-        static START_SIZE = 64;
+        static START_SIZE = 48;
 
         /**
          * Creates the workspace
@@ -757,7 +757,6 @@ export namespace workspace{
                     this.brightnessSlider,
                     this.contrastSlider,
                     this.kernelSlider,
-                    this.sizeSlider,
                     this.widthSlider,
                     this.heightSlider,
                     this.colorSlider,

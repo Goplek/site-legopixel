@@ -17,7 +17,7 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
             icon.contrast(parseInt(ws.contrastSlider.value));
             icon.bright(parseInt(ws.brightnessSlider.value));
             icon.stickToPalette(pal, parseInt(ws.kernelSlider.value, 10));
-            ws.testLabel.text = JSON.stringify(icon.colorStatistics(pal), null, 2);
+            ws.testLabel.text = ('name' in pal ? pal["name"] + '\n' : '') + JSON.stringify(icon.colorStatistics(pal), null, 2);
             illustrator.icon = icon;
         };
         var updateSize = function (size) {
@@ -44,12 +44,6 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
         ws.kernelSlider
             .initRange(0, 8, 1, 1)
             .on('didSetValue', function () { return applyFilters(); });
-        ws.sizeSlider
-            .initRange(32, 192, 32, Workspace.START_SIZE)
-            .on('didSetValue', function () {
-            var size = parseInt(ws.sizeSlider.value);
-            updateSize(new Size(size, size));
-        });
         ws.heightSlider
             .on('didSetValue', function () {
             updateSize(new Size(parseInt(ws.widthSlider.value), parseInt(ws.heightSlider.value)));
@@ -61,36 +55,45 @@ define(["require", "exports", "./workspace", "./icon", "./imageutil", "./latte"]
             updateSize(new Size(parseInt(ws.widthSlider.value), parseInt(ws.heightSlider.value)));
         });
         ws.colorSlider
-            .initRange(1, 8, 1, 7)
+            .initRange(1, 9, 1, 7)
             .on('didSetValue', function () {
             switch (parseInt(ws.colorSlider.value)) {
                 case 1:
                     pal = [Color.black, Color.white];
+                    pal.name = "Black & White";
                     break;
                 case 2:
                     pal = Icon.legoPaletteGrayscale();
+                    pal.name = "Lego Grays";
                     break;
                 case 3:
                     pal = [Color.black, Color.white, Color.red];
+                    pal.name = "Red Tint";
                     break;
                 case 4:
                     pal = [Color.black, Color.white, Color.red, Color.blue, Color.green];
+                    pal.name = "RGB Tints";
                     break;
                 case 5:
                     pal = [Color.black, Color.white, Color.red, Color.blue, Color.green,
                         Color.fromHex('ff0'), Color.fromHex('0ff'), Color.fromHex('f0f')];
+                    pal.name = "Basic Tints";
                     break;
                 case 6:
                     pal = [Color.black, Color.red, Color.white, Color.fromHex('A52A2A'),
                         Color.fromHex('ff0'), Color.fromHex('f7d89e'), Color.green, Color.fromHex('a2fb5f'),
                         Color.blue, Color.fromHex('52c8fd'), Color.fromHex('ccc'), Color.fromHex('777')
                     ];
+                    pal.name = "Aliexpress Legos";
                     break;
                 case 7:
                     pal = Icon.legoPalette();
                     break;
                 case 8:
                     pal = Icon.legoPaletteWithTransparents();
+                    break;
+                case 9:
+                    pal = Icon.sharpiePalette();
                     break;
             }
             applyFilters();
