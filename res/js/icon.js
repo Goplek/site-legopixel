@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -121,24 +124,76 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             };
             Icon.legoPalette = function () {
                 var pal = [
-                    Color.white,
-                    Color.red,
-                    Color.blue,
-                    Color.fromHex('ff0'),
-                    Color.black,
-                    Color.fromHex('2bc114'),
-                    Color.fromHex('d9c285'),
-                    Color.fromHex('1b3c71'),
-                    Color.fromHex('555'),
-                    Color.fromHex('bbb'),
-                    Color.fromHex('51311a'),
-                    Color.fromHex('fd9330'),
-                    Color.combine(Color.fromHex('ccc'), Color.red),
-                    Color.combine(Color.fromHex('ccc'), Color.blue),
-                    Color.combine(Color.fromHex('ccc'), Color.fromHex('ff0')),
-                    Color.combine(Color.fromHex('ccc'), Color.fromHex('2bc114')),
-                    Color.combine(Color.fromHex('ccc'), Color.fromHex('fd9330')),
+                    Color.white.withTag("White 302401/3024"),
+                    Color.red.withTag("Red 302421/3024"),
+                    Color.blue.withTag("Blue 302423/3024"),
+                    Color.fromHex('ff0').withTag("Yellow 302424/3024"),
+                    Color.black.withTag("Black 302426/3024"),
+                    Color.fromHex('2bc114').withTag("Green 302428/3024"),
+                    Color.fromHex('d9c285').withTag("Sand 4159553/3024"),
+                    Color.fromHex('1b3c71').withTag("Navy 4184108/3024"),
+                    Color.fromHex('555').withTag("Dark Grey 4210719/3024"),
+                    Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"),
+                    Color.fromHex('51311a').withTag("Brown 4221744/3024"),
+                    Color.fromHex('fd9330').withTag("Orange 4524929/3024"),
                 ];
+                pal.name = "Lego Official Colors";
+                log(pal.map(function (c) { return c.toHexString(); }));
+                return pal;
+            };
+            Icon.sharpiePalette = function () {
+                var pal = [
+                    Color.white.withTag("White"),
+                    Color.black.withTag("Black"),
+                    Color.fromHex('#8F573B').withTag("Brown"),
+                    Color.fromHex('#F14540').withTag("Red"),
+                    Color.fromHex('#FF6E3B').withTag("Orange"),
+                    Color.fromHex('#FFA05E').withTag("Salmon"),
+                    Color.fromHex('#FFAE8D').withTag("Pink"),
+                    Color.fromHex('#FFF959').withTag("Yellow"),
+                    Color.fromHex('#95D872').withTag("Green"),
+                    Color.fromHex('#86D6AB').withTag("Green Light"),
+                    Color.fromHex('#3FC7FD').withTag("Blue"),
+                    Color.fromHex('#2373F3').withTag("Blue Royal"),
+                    Color.fromHex('#786D6E').withTag("Gray"),
+                    Color.fromHex('#C333AF').withTag("Purple"),
+                    Color.fromHex('#5F1B7A').withTag("Dark Purple"),
+                ];
+                pal.name = "Sharpie Colors";
+                log(pal.map(function (c) { return c.toHexString(); }));
+                return pal;
+            };
+            Icon.legoPaletteGrayscale = function () {
+                var pal = [
+                    Color.white.withTag("White 302401/3024"),
+                    Color.black.withTag("Black 302426/3024"),
+                    Color.fromHex('555').withTag("Dark Grey 4210719/3024"),
+                    Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"),
+                ];
+                log(pal.map(function (c) { return c.toHexString(); }));
+                return pal;
+            };
+            Icon.legoPaletteWithTransparents = function () {
+                var pal = [
+                    Color.white.withTag("White 302401/3024"),
+                    Color.red.withTag("Red 302421/3024"),
+                    Color.blue.withTag("Blue 302423/3024"),
+                    Color.fromHex('ff0').withTag("Yellow 302424/3024"),
+                    Color.black.withTag("Black 302426/3024"),
+                    Color.fromHex('2bc114').withTag("Green 302428/3024"),
+                    Color.fromHex('d9c285').withTag("Sand 4159553/3024"),
+                    Color.fromHex('1b3c71').withTag("Navy 4184108/3024"),
+                    Color.fromHex('555').withTag("Dark Grey 4210719/3024"),
+                    Color.fromHex('bbb').withTag("Medium Grey 4211399/3024"),
+                    Color.fromHex('51311a').withTag("Brown 4221744/3024"),
+                    Color.fromHex('fd9330').withTag("Orange 4524929/3024"),
+                    Color.combine(Color.fromHex('bbb'), Color.red).withTag("Trans Red"),
+                    Color.combine(Color.fromHex('bbb'), Color.blue).withTag("Trans Blue"),
+                    Color.combine(Color.fromHex('bbb'), Color.fromHex('ff0')).withTag("Trans Yellow"),
+                    Color.combine(Color.fromHex('bbb'), Color.fromHex('2bc114')).withTag("Trans Green"),
+                    Color.combine(Color.fromHex('bbb'), Color.fromHex('fd9330')).withTag("Trans Orange"),
+                ];
+                pal.name = "Lego with Transparent Colors";
                 log(pal.map(function (c) { return c.toHexString(); }));
                 return pal;
             };
@@ -192,6 +247,15 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                 var zero = function (color) {
                     return _zeroFill(3, color.r) + _zeroFill(3, color.g) + _zeroFill(3, color.b);
                 };
+                var paletteColorTag = function (colorCode) {
+                    for (var _i = 0, p_1 = p; _i < p_1.length; _i++) {
+                        var palColor = p_1[_i];
+                        if (zero(palColor) == colorCode) {
+                            return palColor.tag;
+                        }
+                    }
+                    return colorCode;
+                };
                 var pal = p.map(function (c) { return zero(c); });
                 var result = {};
                 this.pixels.forEach(function (p) {
@@ -199,11 +263,16 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                     var count = (code in result) ? result[code] : 0;
                     result[code] = count + 1;
                 });
+                var filtered = {};
                 var colors = 0;
-                for (var code in result)
-                    colors++;
+                for (var code in result) {
+                    if (result[code] > 1) {
+                        colors++;
+                        filtered[paletteColorTag(code)] = result[code];
+                    }
+                }
                 log("colors: " + colors);
-                return result;
+                return filtered;
             };
             Icon.prototype.bright = function (delta) {
                 this.pixels.forEach(function (p) { return p.brightness(delta); });
@@ -222,8 +291,9 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             Icon.prototype.getPixelTuples = function () {
                 return this.pixels.map(function (p) { return [p.r, p.g, p.b]; });
             };
-            Icon.prototype.stickToPalette = function (pal) {
-                var a32 = this.dither(pal);
+            Icon.prototype.stickToPalette = function (pal, kernel) {
+                if (kernel === void 0) { kernel = 0; }
+                var a32 = this.dither(pal, kernel);
                 this.importUint32Array(a32);
             };
             Icon.prototype.setPixel = function (x, y, p) {
@@ -272,8 +342,8 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
             };
             Icon.prototype.dither = function (pal, kernel, serpentine) {
                 if (pal === void 0) { pal = null; }
-                if (kernel === void 0) { kernel = 'FloydSteinberg'; }
-                if (serpentine === void 0) { serpentine = true; }
+                if (kernel === void 0) { kernel = 0; }
+                if (serpentine === void 0) { serpentine = false; }
                 var kernels = {
                     FloydSteinberg: [
                         [7 / 16, 1, 0],
@@ -358,7 +428,18 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                         [1 / 4, 0, 1],
                     ],
                 };
-                if (!kernel || !kernels[kernel]) {
+                var names = [
+                    "FloydSteinberg",
+                    "FalseFloydSteinberg",
+                    "Stucki",
+                    "Atkinson",
+                    "Jarvis",
+                    "Burkes",
+                    "Sierra",
+                    "TwoSierra",
+                    "SierraLite"
+                ];
+                if (kernel < 0 || kernel > names.length - 1) {
                     throw 'Unknown dithering kernel: ' + kernel;
                 }
                 var legoPal = pal;
@@ -372,9 +453,8 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                         (nearest.g << 8) |
                         nearest.r;
                 };
-                var ds = kernels[kernel];
+                var ds = kernels[names[kernel]];
                 var buf32 = this.toUint32Array(), width = this.width, height = this.height;
-                var len = buf32.length;
                 var dir = serpentine ? -1 : 1;
                 for (var y = 0; y < height; y++) {
                     if (serpentine)
@@ -672,12 +752,12 @@ define(["require", "exports", "./latte", "./workspace", "./imageutil"], function
                     this.down = false;
                 }
                 else if (mouse == Mouse.MOVE) {
-                    var p_1 = null;
+                    var p_2 = null;
                     this.illustrator.projection.ifPresent(function (projection) {
-                        return p_1 = projection.getPixelAt(e.offsetX, e.offsetY);
+                        return p_2 = projection.getPixelAt(e.offsetX, e.offsetY);
                     });
-                    if (this.down && p_1) {
-                        this.illustrator.icon.getPixel(p_1.x, p_1.y).setColor(Color.red);
+                    if (this.down && p_2) {
+                        this.illustrator.icon.getPixel(p_2.x, p_2.y).setColor(Color.red);
                     }
                 }
             };

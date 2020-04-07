@@ -1,14 +1,17 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], function (require, exports, ui_1, viewport_1, latte_1, linearicon_1) {
+define(["require", "exports", "./ui", "./viewport", "./latte"], function (require, exports, ui_1, viewport_1, latte_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var workspace;
@@ -18,12 +21,6 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
         var DivElement = ui_1.ui.DivElement;
         var InputElement = ui_1.ui.InputElement;
         var Label = ui_1.ui.LabelItem;
-        var Optional = latte_1.latte.Optional;
-        var LinearIcon = linearicon_1.linearicon.LinearIcon;
-        var MainView = ui_1.ui.MainView;
-        var SplitView = ui_1.ui.SplitView;
-        var Side = latte_1.latte.Side;
-        var ColorView = ui_1.ui.ColorView;
         var Mouse;
         (function (Mouse) {
             Mouse[Mouse["UP"] = 0] = "UP";
@@ -476,34 +473,12 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
                     this.sidebar.add([
                         this.brightnessSlider,
                         this.contrastSlider,
-                        this.sizeSlider,
+                        this.kernelSlider,
                         this.widthSlider,
                         this.heightSlider,
                         this.colorSlider,
                         this.testLabel
                     ]);
-                    this.testLabel.icon = Optional.of(LinearIcon.cross);
-                    var a = new SplitView();
-                    a.side = Side.LEFT;
-                    a.wide = 100;
-                    a.sideView = Optional.of(ColorView.fromString('f00'));
-                    var b = new SplitView();
-                    b.side = Side.TOP;
-                    b.wide = 100;
-                    var c = new SplitView();
-                    c.side = Side.LEFT;
-                    c.wide = 100;
-                    c.sideView = Optional.of(ColorView.fromString('0f0'));
-                    var d = new SplitView();
-                    d.side = Side.RIGHT;
-                    d.wide = 100;
-                    d.view = Optional.of(ColorView.fromString('f0f'));
-                    d.sideView = Optional.of(ColorView.fromString('0ff'));
-                    a.view = Optional.of(b);
-                    b.view = Optional.of(c);
-                    b.sideView = Optional.of(d);
-                    c.view = Optional.of(ColorView.fromString('00f'));
-                    MainView.instance.view = Optional.of(a);
                     setInterval(function () { return _this.divFps.html = _this.canvas.fps + "fps"; }, 500);
                 }
             };
@@ -512,6 +487,17 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
                     var _this = this;
                     return this.getLazyProperty('brightnessSlider', Slider, function () {
                         return new Slider("Brightness")
+                            .attachTo(_this.sidebar);
+                    });
+                },
+                enumerable: true,
+                configurable: true
+            });
+            Object.defineProperty(Workspace.prototype, "kernelSlider", {
+                get: function () {
+                    var _this = this;
+                    return this.getLazyProperty('kernelSlider', Slider, function () {
+                        return new Slider("Kernel")
                             .attachTo(_this.sidebar);
                     });
                 },
@@ -603,13 +589,15 @@ define(["require", "exports", "./ui", "./viewport", "./latte", "./linearicon"], 
             Object.defineProperty(Workspace.prototype, "testLabel", {
                 get: function () {
                     return this.getLazyProperty('testLabel', Label, function () {
-                        return new Label('Some Text');
+                        var lbl = new Label('[Result]');
+                        lbl.raw.style.whiteSpace = 'pre';
+                        return lbl;
                     });
                 },
                 enumerable: true,
                 configurable: true
             });
-            Workspace.START_SIZE = 64;
+            Workspace.START_SIZE = 48;
             return Workspace;
         }(DivElement));
         workspace.Workspace = Workspace;
