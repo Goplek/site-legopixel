@@ -1,7 +1,10 @@
 var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -561,6 +564,16 @@ define(["require", "exports"], function (require, exports) {
                 enumerable: true,
                 configurable: true
             });
+            Object.defineProperty(Color.prototype, "tag", {
+                get: function () {
+                    return this.getPropertyValue('tag', String, "");
+                },
+                set: function (value) {
+                    this.setPropertyValue('tag', value, String);
+                },
+                enumerable: true,
+                configurable: true
+            });
             Color.prototype.equals = function (c) {
                 return c.a == this.a && c.r === this.r && c.g === this.g && c.b === this.b;
             };
@@ -599,6 +612,10 @@ define(["require", "exports"], function (require, exports) {
                 else {
                     return this.toHexString();
                 }
+            };
+            Color.prototype.withTag = function (tag) {
+                this.tag = tag;
+                return this;
             };
             Object.defineProperty(Color.prototype, "a", {
                 get: function () {

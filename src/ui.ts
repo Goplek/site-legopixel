@@ -1186,6 +1186,14 @@ export namespace ui{
 
     }
 
+    export class ToolbarItem extends Item{
+
+        constructor(){
+            super('toolbar');
+        }
+
+    }
+
     /**
      * Basic selectable pattern
      */
@@ -1438,6 +1446,16 @@ export namespace ui{
         //region Properties
 
         /**
+         * Gets a value indicating if the anchored side is vertical
+         *
+         * @returns {boolean}
+         */
+        get isVertical(): boolean {
+            return this.side == Side.LEFT || this.side == Side.RIGHT;
+        }
+
+
+        /**
          * Gets or sets the side of the anchored element.
          */
         get side(): Side {
@@ -1673,6 +1691,57 @@ export namespace ui{
 
 
         //endregion
+    }
+
+    export class ToolbarView extends AnchorView{
+
+        constructor(){
+            super('toolbar');
+        }
+
+        //region Protected Methods
+
+        /**
+         * Override.
+         */
+        protected updateUi(){
+            super.updateUi();
+
+        }
+
+        //endregion
+
+        //region Methods
+
+        /**
+         * Override.
+         * @param name
+         */
+        onEvent(name: string, args: any[]){
+            super.onEvent(name, args);
+
+            if(name == 'attach') {
+                this.add(this.toolbar);
+                this.updateUi();
+            }
+
+        }
+
+
+        //endregion
+
+        //region Properties
+        /**
+         * Gets
+         */
+        get toolbar(): ToolbarItem {
+            return this.getLazyProperty('toolbar', ToolbarItem, () => {
+                return new ToolbarItem();
+            });
+        }
+
+        //endregion
+
     }
 
     export class ColorView extends View{

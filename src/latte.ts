@@ -909,6 +909,22 @@ export namespace latte{
             });
         }
 
+        /**
+         * Gets or sets the color
+         */
+        get tag(): string {
+            return this.getPropertyValue('tag', String, "");
+        }
+
+        /**
+         * Gets or sets the color
+         *
+         * @param {string} value
+         */
+        set tag(value: string) {
+            this.setPropertyValue('tag', value, String);
+        }
+
         //endregion
 
         /**
@@ -1000,6 +1016,11 @@ export namespace latte{
                 return this.toHexString();
             }
 
+        }
+
+        withTag(tag: string): this{
+            this.tag = tag;
+            return this;
         }
 
         //endregion
